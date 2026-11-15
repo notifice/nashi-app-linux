@@ -49,8 +49,8 @@ internal static partial class Program
             var first=ImageEngine.Apply("convert",[png],named,new ImageOptions(),"jpg");var second=ImageEngine.Apply("convert",[png],named,new ImageOptions(),"jpg");
             Check(File.ReadAllText(existing)=="keep"&&first[0]!=existing&&second[0]!=first[0]&&File.Exists(second[0]),"no overwrite");
             Check(Path.GetFileName(first[0])=="a 2.jpg","collision naming");Check(Sha(png)==pngHash,"convert keeps input");
-            var threw=false;try{ImageEngine.Apply("compress",[png],Path.Combine(dir,"o-x"),new ImageOptions());}catch(NotSupportedException error){threw=error.Message=="compress is not available on Linux yet.";}
-            Check(threw,"deferred tool throws NotSupported");
+            var threw=false;try{ImageEngine.Apply("bogusTool",[png],Path.Combine(dir,"o-x"),new ImageOptions());}catch(ArgumentException error){threw=error.Message=="Unsupported image tool.";}
+            Check(threw,"unknown tool rejected");
             Check(ImageEngine.FromPng(ImageEngine.PngBytes(resized)) is {Width:50,Height:20},"PNG bytes round trip");
         }
         finally{try{Directory.Delete(dir,true);}catch(IOException){}}
