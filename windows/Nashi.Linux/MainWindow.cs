@@ -77,7 +77,7 @@ internal sealed partial class MainWindow:Window
         Add(args.Where(a=>!a.StartsWith('-')));Refresh();Opened+=(_,_)=>Nashi.Linux.Theme.Entrance(home);
         if(library.RecoveryNotice is {} notice)L10n.SetText(status,notice);
         else if(preferences.RecoveryNotice is {} settingsNotice)L10n.SetText(status,settingsNotice);
-        InitLibrary();InitSettings();InitTools();InitDocuments();InitWeb();InitFileActions();InitDesktop();
+        InitLibrary();InitSettings();InitTools();InitDocuments();InitWeb();InitFileActions();InitDesktop();InitUpdates();
     }
     partial void InitLibrary();      // P2-E
     partial void InitSettings();     // P2-F
@@ -86,6 +86,7 @@ internal sealed partial class MainWindow:Window
     partial void InitWeb();          // P3-C
     partial void InitFileActions();  // P3-D
     partial void InitDesktop();      // P3-F
+    partial void InitUpdates();      // P4-D (MainWindow.Updates.cs)
     partial void RenderLibraryRows(); // P2-E: rebuilds Library and recent rows after Record
     private static TextBlock Text(string value,double size,string? color=null,bool localize=true)=>Ui.Text(value,size,color,localize);
     private static Border Card(Control content)=>Ui.Card(content);

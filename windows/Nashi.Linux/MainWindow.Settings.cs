@@ -36,8 +36,8 @@ internal sealed partial class MainWindow
     {
         if(settingsWindow is null)
         {
-            // Update checks arrive with P4-D; until then the Updates section has no button.
-            settingsWindow=new(preferences,ApplyPreferences,null,library);
+            // The Updates section offers a manual release check; Linux has no self-update.
+            settingsWindow=new(preferences,ApplyPreferences,CheckUpdatesNowAsync,library);
             settingsWindow.Closed+=(_,_)=>{settingsWindow=null;appearance.SelectedItem=char.ToUpper(library.Appearance[0])+library.Appearance[1..];};
             settingsWindow.Show(this);
         }

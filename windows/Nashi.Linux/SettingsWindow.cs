@@ -80,7 +80,7 @@ internal sealed partial class SettingsWindow:Window
                 page.Children.Add(Ui.Button("Choose downloads folder…",async()=>await ChooseFolderAsync("Save downloaded media here",f=>store.Value with{DownloadFolder=f})));page.Children.Add(new TextBlock{Text=store.Value.DownloadFolder,TextWrapping=Avalonia.Media.TextWrapping.Wrap});
                 break;
             case "Updates":
-                Heading("Fresh things, on their way.","Updates are downloaded from the public Nashi repository and verified before installation. No GitHub account or token is required.");
+                Heading("Fresh things, on their way.",Services.Updates is {SelfUpdateSupported:false}?"Nashi checks the public release page for a newer version and offers to open it. Nothing is downloaded or installed for you.":"Updates are downloaded from the public Nashi repository and verified before installation. No GitHub account or token is required.");
                 Toggle("Check for updates automatically",store.Value.AutomaticUpdateChecks,v=>Save(store.Value with{AutomaticUpdateChecks=v}));
                 if(update is not null)page.Children.Add(Ui.Button("Check for updates",async()=>{try{await update();}catch(Exception error){Fail(error.Message,"Update check failed");}}));
                 break;
