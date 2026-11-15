@@ -52,4 +52,4 @@ The wheel opens centred on the mouse pointer and Nashi's own window stays hidden
 
 ## Differences from Windows
 
-See the Linux column in [FEATURE-PARITY.md](../FEATURE-PARITY.md). Not available on Linux: the global drag wheel and window-management wheel, Share, face detection, `.lnk` shortcuts, and the frame, collage, redact and annotate image tools (shown as "isn't available on Linux yet").
+See the Linux column in [FEATURE-PARITY.md](../FEATURE-PARITY.md). Not available on Linux: the global drag wheel (replaced by the global shortcut above) and window-management wheel, Share, face detection in redact, `.lnk` shortcuts. Annotate has fewer tools than Windows (no marker, ellipse, numbered, magnifier or stamp). The media editor previews FFmpeg still frames instead of playing video, and has no audio playback.

@@ -6,6 +6,8 @@
 
 Nashi is an independent, open-source file conversion and editing app inspired by [Tangerine](https://tangerineformac.com/)'s drag-and-wheel interaction. It adds public web-media downloads, QR reading, refined crop/annotation workflows, keyboard media editing, live progress and signed automatic updates. Nashi is not affiliated with Tangerine or LEAP STUDIO and includes no proprietary reference-app binaries or artwork.
 
+> **About this fork (nashi-app-linux).** A personal fork of [orkunisitmak/nashi-app](https://github.com/orkunisitmak/nashi-app) that adds a native Linux x64 desktop app (Avalonia 12, .NET 10). The macOS and Windows apps and the shared `Nashi.Core` are unchanged from upstream. Linux code lives in `windows/Nashi.Engine` (cross-platform image/PDF engine), `windows/Nashi.Linux` (the app) and `windows/Nashi.Linux.Verify` (engine checks). Not affiliated with or supported by upstream. See [Linux in this fork](#linux-in-this-fork).
+
 Try the [interactive browser playground](https://orkunisitmak.github.io/nashi-app/#playground): drag sample files, use the wheel and shortcuts, and explore all 27 tools. Supported image/PDF/audio exports are real; desktop-only operations are labeled previews.
 
 ## See Nashi in action
@@ -28,7 +30,7 @@ Windows screenshot: native UI test capture from the released 0.7.5 code, verifie
 
 - **[macOS ZIP · Apple Silicon, macOS 13+](https://github.com/orkunisitmak/nashi-app/releases/latest/download/Nashi-macOS-arm64.zip):** extract, move Nashi.app to your Applications folder and open it. The full macOS catalog has 27 tools, 46 input formats and 276 conversion routes.
 - **[Windows x64 ZIP](https://github.com/orkunisitmak/nashi-app/releases/latest/download/Nashi-Windows-x64.zip):** extract the entire archive into its own writable folder, then open Nashi.exe. No separate .NET install is required. Keep the folder together so portable updates can replace the app safely. [Windows features and differences](windows/README.md).
-- **Linux x64 (Avalonia):** no release yet. Build from source; see the [Linux guide](windows/Nashi.Linux/README.md).
+- **Linux x64 (Avalonia, this fork):** build from source and install with the bundled script; see [Linux in this fork](#linux-in-this-fork).
 
 First launch guides you through **Finish setup → Download missing tools** for hash-verified downloads directly from upstream. Media and Office tools install in sequence; existing tools are kept, and cancelled or failed setup can be retried. **Tools ready** appears only when both groups are available. Core native image/PDF features work immediately. [Exact versions, hashes and licenses](docs/dependencies.md).
 
@@ -55,6 +57,29 @@ The public app is written to `build/Nashi.app`. Large runtimes are installed thr
 
 For Linux (x64, .NET 10 SDK): `dotnet build windows/Nashi.Linux -c Release`, then see the [Linux guide](windows/Nashi.Linux/README.md) for running, tests and packaging.
 
+## Linux in this fork
+
+Install (x64, needs the .NET 10 SDK to build):
+
+```sh
+dotnet build windows/Nashi.Linux -c Release
+scripts/package-linux.sh            # build/Nashi-Linux-x64.tar.gz (+ .sha256); add --appimage for an AppImage
+tar -xzf build/Nashi-Linux-x64.tar.gz && Nashi/install.sh   # installs to ~/.local/opt/nashi, adds ~/.local/bin/nashi, launcher and file associations
+# Nashi/install.sh --uninstall removes it again
+```
+
+Differences from the Windows app:
+
+- **Wheel:** no global drag wheel (Wayland does not let apps watch drags outside their window). Instead, copy files in your file manager (Ctrl+C) and press a global shortcut bound to `nashi --wheel`; the wheel opens at the mouse pointer (pointer position from KWin on KDE Plasma, screen centre elsewhere) without showing the main window. Needs `wl-clipboard`. Inside the window: drop files or Ctrl+O, then Ctrl+Space.
+- **Not available:** window-management wheel, Share, face detection in redact, `.lnk` shortcuts.
+- **Media editor preview:** FFmpeg still frames (no embedded video player, no audio playback in the editor).
+- **Office conversion:** uses the system LibreOffice (not downloaded). OCR uses the system Tesseract.
+- **Updates:** Nashi checks this fork's GitHub releases and opens the release page; it does not self-update.
+- **Packaging:** tar.gz with `install.sh`, or AppImage.
+- **Display:** runs through XWayland on Wayland sessions; tray icon needs a StatusNotifier host (KDE, or GNOME with AppIndicator).
+
+Details, runtime dependencies and test commands: [Linux guide](windows/Nashi.Linux/README.md). Feature-by-feature status: [FEATURE-PARITY.md](windows/FEATURE-PARITY.md).
+
 ## Privacy and updates
 
 Conversion/editing run locally. Web downloads contact the selected media site. No analytics, cloud account or browser-cookie import is built in. Official releases update through this public repository without a GitHub account or token. macOS verifies the signed feed and archive; Windows verifies the archive signature and version before replacement. Active operations finish or cancel before the app exits for an update. Portable Windows updates retain the previous folder as a recoverable backup.
@@ -62,3 +87,5 @@ Conversion/editing run locally. Web downloads contact the selected media site. N
 ## License and acknowledgments
 
 Nashi's original source is [MIT](LICENSE). Vendored libraries and external tools retain their own licenses; see [macOS notices](Resources/THIRD-PARTY-NOTICES.txt), [Windows notices](windows/THIRD-PARTY-NOTICES.txt) and [runtime setup](docs/dependencies.md). No purchase flow or reference-app account is required.
+
+The Linux port added in this fork is also MIT. It bundles third-party libraries under their own licenses (Avalonia, SkiaSharp/HarfBuzzSharp and .NET: MIT; Inter font: OFL-1.1; PDFium: BSD-style/Apache-2.0; Magick.NET, PdfPig, ZXing: Apache-2.0, among others listed in the notices). Tools it downloads on request keep their own licenses (FFmpeg: GPL; ExifTool: Artistic/GPL; yt-dlp: Unlicense; Deno: MIT). LibreOffice and Tesseract come from your distribution. Full list: [Windows/Linux notices](windows/THIRD-PARTY-NOTICES.txt) and [`windows/licenses`](windows/licenses).
