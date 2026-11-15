@@ -12,7 +12,7 @@ internal static partial class SmokeTests
     {
         var input=Path.Combine(directory,"fixture.png");
         if(!File.Exists(input))File.WriteAllBytes(input,ImageEngine.PngBytes(new PixelImage(64,48,Enumerable.Repeat((byte)200,64*48*4).ToArray())));
-        var previous=Feedback.Enabled;Feedback.Enabled=false;
+        var previous=Feedback.Enabled;Feedback.Enabled=false;WheelWindow.KeepOpenOnDeactivateForTest=true;
         try
         {
             var files=new[]{input};var convert=WheelPresentation.Choices(files,"convert");var index=convert.ToList().FindIndex(c=>c.Id=="convert:jpg");
@@ -35,6 +35,6 @@ internal static partial class SmokeTests
             PressKey(tools,Key.LeftCtrl);var mode=tools.Mode;tools.Close();await toolsTask;
             return(mode=="tools",$"picked {picked.Id} at index {index} of {convert.Count}; Ctrl switched to {mode}");
         }
-        finally{Feedback.Enabled=previous;}
+        finally{Feedback.Enabled=previous;WheelWindow.KeepOpenOnDeactivateForTest=false;}
     }));
 }

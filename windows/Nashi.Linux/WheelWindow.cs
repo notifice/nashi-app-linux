@@ -15,6 +15,8 @@ namespace Nashi.Linux;
 public sealed record ToolChoice(string Id,string Title,string Symbol,WindowPlacement? Placement=null);
 public sealed class WheelWindow:Window
 {
+    // Smoke scenes run several windows back to back; a focus hand-off between them must not dismiss the wheel.
+    internal static bool KeepOpenOnDeactivateForTest;
     private readonly List<Button> buttons=[];
     private readonly List<Path> sectors=[];
     private IReadOnlyList<ToolChoice> choices;
@@ -94,7 +96,7 @@ public sealed class WheelWindow:Window
         AddHandler(PointerWheelChangedEvent,(_,e)=>{if(buttons.Count==0||e.Delta.Y==0)return;Move(e.Delta.Y<0?1:-1);e.Handled=true;},RoutingStrategies.Tunnel);
         bool closing=false,activated=false;
         Opened+=(_,_)=>{WheelPresentation.Animate(view);if(!externalDrag&&buttons.Count>0)buttons[0].Focus();};Activated+=(_,_)=>activated=true;
-        Closing+=(_,_)=>closing=true;Closed+=(_,_)=>done.TrySetResult(null);Deactivated+=(_,_)=>{if(!externalDrag&&activated&&!closing&&IsVisible)Close();};
+        Closing+=(_,_)=>closing=true;Closed+=(_,_)=>done.TrySetResult(null);Deactivated+=(_,_)=>{if(!externalDrag&&!KeepOpenOnDeactivateForTest&&activated&&!closing&&IsVisible)Close();};
     }
     // Builds the segments and the centre label for one set of choices; a mode switch calls it again on the same canvas.
     private void Populate(IReadOnlyList<ToolChoice> tools)
