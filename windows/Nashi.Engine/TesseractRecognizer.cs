@@ -6,13 +6,16 @@ namespace Nashi.Engine;
 public sealed class TesseractRecognizer:ITextRecognizer
 {
     private static string? Executable=>LinuxOfficeRuntime.FindOnPath("tesseract");
-    // The binary is useless without a language pack. Every installed one (besides osd) is used, so a system without English data still works.
+    // The binary is useless without a language pack; see Pick for which installed packs are used.
     private static readonly Lazy<string[]> Languages=new(()=>
     {
         if(Executable is not {} tesseract)return [];
-        try{return ProcessRunner.RunAsync(tesseract,["--list-langs"]).GetAwaiter().GetResult().Output.Split('\n').Skip(1).Select(l=>l.Trim()).Where(l=>l.Length>0&&l!="osd").ToArray();}
+        try{return ProcessRunner.RunAsync(tesseract,["--list-langs"]).GetAwaiter().GetResult().Output.Split('\n').Skip(1).Select(l=>l.Trim()).Where(l=>l.Length>0&&l!="osd").ToArray() is var all?Pick(all):[];}
         catch(Exception error)when(error is IOException or InvalidOperationException){return [];}
     });
+    // Loading every installed pack makes each call slow and less accurate on large installs.
+    // Prefer the app's UI languages (English, Turkish); otherwise fall back to the first installed pack.
+    private static string[] Pick(string[] installed)=>installed.Where(l=>l is "eng" or "tur").ToArray() is {Length:>0} preferred?preferred:installed.Take(1).ToArray();
     public bool Available=>Executable is not null&&Languages.Value.Length>0;
     public string SetupHint=>"Install Tesseract with your package manager, e.g. sudo pacman -S tesseract tesseract-data-eng / sudo apt install tesseract-ocr";
     public async Task<string> RecognizeAsync(byte[] png,CancellationToken token)
