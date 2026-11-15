@@ -15,7 +15,7 @@ namespace Nashi.Linux;
 /// Everything an accepted editor produces. Image tools read Image and Format; media and document tasks fill the rest through their hooks.
 internal sealed record ToolEditorResult(ImageOptions Image,string Format,bool PreserveMetadata,string[] OrderedInputs,MediaOptions Media,DocumentOptions Document,int[] Pages,SplitChoice Split);
 
-// Port of Nashi.Windows/ToolEditor.cs for the image tools (crop, resize, rotate, editImage, compress, convert).
+// Port of Nashi.Windows/ToolEditor.cs for the image tools (crop, resize, rotate, editImage, frameImage, createCollage, redactImage, annotate, compress, convert).
 // Media and document editors add their controls and options through the four partial hooks below, in their own files.
 internal sealed partial class ToolEditor:Window
 {
@@ -30,8 +30,7 @@ internal sealed partial class ToolEditor:Window
 
     /// The editor currently open through ShowAsync; the smoke tests drive it.
     internal static ToolEditor? Active{get;private set;}
-    private static readonly Dictionary<string,string> Titles=new(){["crop"]="Crop",["resize"]="Resize",["rotate"]="Rotate",["editImage"]="Edit Photo",["compress"]="Compress",["convert"]="Convert"};
-    private static readonly string[] Deferred=["frameImage","createCollage","redactImage","annotate"];
+    private static readonly Dictionary<string,string> Titles=new(){["crop"]="Crop",["resize"]="Resize",["rotate"]="Rotate",["editImage"]="Edit Photo",["compress"]="Compress",["convert"]="Convert",["frameImage"]="Frame",["createCollage"]="Collage",["redactImage"]="Redact Photo",["annotate"]="Annotate"};
 
     private readonly string tool;private readonly PixelImage? source;private readonly Bitmap? bitmap;private readonly Dictionary<string,TextBox> fields=[];private readonly Dictionary<string,string> defaults=[];
     private readonly ComboBox format=new();
@@ -74,7 +73,7 @@ internal sealed partial class ToolEditor:Window
             options.Children.Add(L10n.Label(new TextBlock{Text="Drag to select a crop. Hold Shift for a square; existing selections keep their ratio. Press Enter to save.",TextWrapping=TextWrapping.Wrap,Margin=new(4,4,4,16)}));
             Field("X",0);Field("Y",0);Field("Width",bitmap?.PixelSize.Width??media?.Video?.Width??1280);Field("Height",bitmap?.PixelSize.Height??media?.Video?.Height??720);
         }
-        BuildPhotoOptions(inputs??[input]);BuildInputOrder(inputs??[input]);BuildCropOptions();BuildCompressionOptions();BuildDocumentOptions();BuildMediaOptions();
+        BuildPhotoOptions(inputs??[input]);BuildComposeOptions();BuildInputOrder(inputs??[input]);BuildRedactionOptions();BuildAnnotationOptions();BuildCropOptions();BuildCompressionOptions();BuildDocumentOptions();BuildMediaOptions();
         if(options.Children.Count==1)options.Children.Add(L10n.Label(new TextBlock{Text="Ready to make a fresh copy. No extra settings needed.",TextWrapping=TextWrapping.Wrap,Margin=new(4,20,4,0)}));
         var footer=new DockPanel{Margin=new(0,20,0,0),LastChildFill=false};Grid.SetRow(footer,2);grid.Children.Add(footer);
         var save=Ui.Primary("Save new copy  ↗",Save);DockPanel.SetDock(save,Dock.Right);footer.Children.Add(save);
@@ -91,7 +90,6 @@ internal sealed partial class ToolEditor:Window
     internal static async Task<ToolEditorResult?> ShowDetailedAsync(Window owner,string tool,IReadOnlyList<string> files,PreferencesStore? preferences=null,string? format=null,string[]? outputFormats=null,string? title=null,MediaInfo? media=null,PixelImage? frame=null,Toolchain? tools=null)
     {
         if(files.Count==0)throw new ArgumentException("Choose a file first.");
-        if(Deferred.Contains(tool))throw new NotSupportedException($"{tool} is not available on Linux yet.");
         // Media tools get their probe result and, for crop and redact, the first frame as the canvas picture.
         PixelImage? preview=media is null?null:frame;
         if(media is null&&FeatureCatalog.IsImage(files[0]))
@@ -198,6 +196,7 @@ internal sealed partial class ToolEditor:Window
             if(focused is Button)return;
             Save();e.Handled=true;return;
         }
+        if(tool=="annotate"&&e.Key==Key.Z&&e.KeyModifiers==KeyModifiers.Control&&focused is not TextBox){UndoAnnotation();e.Handled=true;return;}
         if(HandleMediaKey(e,focused))e.Handled=true;
     }
     private void Save()=>ReadSettings(true);
@@ -216,7 +215,7 @@ internal sealed partial class ToolEditor:Window
             var next=PhotoSettings(new(Side("Width",w),Side("Height",h),(int)Value("Degrees",tool=="rotate"?90:0),tool=="crop"?new Nashi.Engine.PixelRect((int)x,(int)y,(int)w,(int)h):null,(int)Value("Quality (%)",85),true,null))with{Scale=preset?.Scale,LongestEdge=preset?.LongestEdge};
             var mediaOptions=new MediaOptions();ReadMediaOptions(ref mediaOptions);
             var documentOptions=new DocumentOptions(144,documentLayout.SelectedItem as string??"editable",epubLayout.SelectedItem as string??"reflowable");ReadDocumentOptions(ref documentOptions);
-            ImageOptions=next;MediaOptions=mediaOptions;DocumentOptions=documentOptions;Format=format.SelectedItem as string??"png";
+            ImageOptions=ComposeSettings(next);MediaOptions=mediaOptions;DocumentOptions=documentOptions;Format=format.SelectedItem as string??"png";
             if(accept)Close(true);return true;
         }
         catch(Exception error)when(error is ArgumentException or FormatException or OverflowException)

@@ -31,7 +31,7 @@ Windows uses Explorer, Windows keyboard conventions and Windows Share. Apple Air
 | --- | --- | --- |
 | Drag wheels | Tools, conversion and file-action wheel from the Home button, Ctrl+Space or Enter | Global drag wheel, window-management wheel, global drag chords and modifiers are dropped |
 | Home / Library / clipboard / settings | Same pages, themes, search and persistence; settings under `$XDG_CONFIG_HOME` | Drag-shortcut, window-management and Explorer-reveal settings are hidden |
-| Images | Resize, crop, rotate, flip, photo adjustments with live preview, compress, images to PDF | Frame, collage, redact and annotate tools show "isn't available on Linux yet" |
+| Images | Resize, crop, rotate, flip, photo adjustments with live preview, compress, images to PDF; frame and collage with live preview; redact with solid/blur/pixelate areas and a removable list; annotate with pen, arrow, rectangle and text, undo | Annotate has no marker, ellipse, numbered mark, magnifier, image stamp or select/move; redact has no text or face detection; frame canvas size is empty (auto) by default |
 | Media | FFmpeg/ffprobe conversion and tools; media editor uses ffmpeg still frames only | No audio/video playback preview ("Playback preview isn't available yet"); still frames only |
 | PDF | Organizer, merge/split, page export, QR; PDFium Linux native library | None known |
 | Documents | Office/Pages conversions via the system LibreOffice (never downloaded) | LibreOffice must be installed by the user |

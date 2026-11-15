@@ -10,7 +10,7 @@ namespace Nashi.Linux;
 internal sealed partial class MainWindow
 {
     private static readonly string[] FileActionIds=["float","copy","move","copyPath","terminal"];
-    private static readonly string[] ImageToolIds=["resize","crop","rotate","flip","editImage","compress","createPDF"];
+    private static readonly string[] ImageToolIds=["resize","crop","rotate","flip","editImage","compress","createPDF","frameImage","createCollage","redactImage","annotate"];
     partial void InitTools()=>Refresh();
     /// The wheel opens on the first mode that has something for the selection (Tools, then Convert, then File actions); Ctrl, Shift and Alt switch modes as set in Settings.
     private async void ShowWheel(){try{await ShowWheelAsync();}catch(Exception error){await ShowInfoAsync(error.Message,"Couldn’t open this tool");}}

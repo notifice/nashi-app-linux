@@ -8,8 +8,7 @@ using Nashi.Core;
 using Nashi.Engine;
 using Nashi.Linux.Platform;
 namespace Nashi.Linux;
-// Photo adjustments with live preview (editImage). frameImage, createCollage, redactImage and annotate are deferred:
-// ImageEngine does not implement them on Linux yet.
+// Photo adjustments with live preview (editImage). Frame and collage previews are in ImageComposeOptions.cs.
 internal sealed partial class ToolEditor
 {
     private string[] collageInputs=[];
