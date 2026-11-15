@@ -60,7 +60,7 @@ internal sealed partial class ToolEditor:Window
             previewStack.Children.Add(ZoomablePreview(drawing));
             drawing.PointerPressed+=BeginDraw;drawing.PointerMoved+=MoveDraw;drawing.PointerReleased+=EndDraw;
         }
-        else previewStack.Children.Add(L10n.Label(new TextBlock{Text="Your files will be saved as new copies.\nChoose options, then save.",FontSize=21,TextWrapping=TextWrapping.Wrap,Margin=new(0,50,20,0)}));
+        else if(media is null)previewStack.Children.Add(L10n.Label(new TextBlock{Text="Your files will be saved as new copies.\nChoose options, then save.",FontSize=21,TextWrapping=TextWrapping.Wrap,Margin=new(0,50,20,0)}));
         if(tool=="convert")
         {
             var formats=outputFormats?.ToHashSet()??(media is not null?MediaEngine.VideoFormats.Concat(MediaEngine.AudioFormats).ToHashSet():ImageEngine.Formats.ToHashSet());
@@ -88,17 +88,19 @@ internal sealed partial class ToolEditor:Window
     /// Opens the editor modally for the first file and returns the image options, or null when cancelled.
     internal static async Task<ImageOptions?> ShowAsync(Window owner,string tool,IReadOnlyList<string> files,string? title=null)=>(await ShowDetailedAsync(owner,tool,files,title:title))?.Image;
     /// Same as ShowAsync with everything the editor produced. outputFormats limits the convert format list; format preselects one.
-    internal static async Task<ToolEditorResult?> ShowDetailedAsync(Window owner,string tool,IReadOnlyList<string> files,PreferencesStore? preferences=null,string? format=null,string[]? outputFormats=null,string? title=null)
+    internal static async Task<ToolEditorResult?> ShowDetailedAsync(Window owner,string tool,IReadOnlyList<string> files,PreferencesStore? preferences=null,string? format=null,string[]? outputFormats=null,string? title=null,MediaInfo? media=null,PixelImage? frame=null,Toolchain? tools=null)
     {
         if(files.Count==0)throw new ArgumentException("Choose a file first.");
         if(Deferred.Contains(tool))throw new NotSupportedException($"{tool} is not available on Linux yet.");
-        PixelImage? preview=null;
-        if(FeatureCatalog.IsImage(files[0]))
+        // Media tools get their probe result and, for crop and redact, the first frame as the canvas picture.
+        PixelImage? preview=media is null?null:frame;
+        if(media is null&&FeatureCatalog.IsImage(files[0]))
         {
             try{preview=await Task.Run(()=>ImageEngine.Load(files[0]));}
             catch(Exception error)when(error is ArgumentException or FormatException or InvalidDataException or ImageMagick.MagickException or IOException or NotSupportedException or UnauthorizedAccessException){preview=null;}
         }
-        var editor=new ToolEditor(tool,L10n.Text(title??Titles.GetValueOrDefault(tool,tool)),files[0],preview,files,outputFormats);
+        var editor=new ToolEditor(tool,L10n.Text(title??Titles.GetValueOrDefault(tool,tool)),files[0],preview,files,outputFormats,media);
+        if(tools is not null)editor.ConfigureMediaRuntime(tools);
         if(preferences is not null)editor.ConfigureProfiles(preferences,format);
         else if(format is not null&&editor.format.Items.Contains(format))editor.format.SelectedItem=format;
         Active=editor;
@@ -134,7 +136,7 @@ internal sealed partial class ToolEditor:Window
     }
     private void Reset()
     {
-        resetCompression?.Invoke();resetPhotoView?.Invoke();resetPreviewZoom?.Invoke();
+        resetMedia?.Invoke();resetCompression?.Invoke();resetPhotoView?.Invoke();resetPreviewZoom?.Invoke();
         foreach(var pair in defaults)fields[pair.Key].Text=pair.Value;
         foreach(var choice in new[]{sampleDepth,documentLayout,epubLayout,aspectRatio})choice.SelectedIndex=0;
         flipHorizontal.IsChecked=flipVertical.IsChecked=false;preserveMetadata.IsChecked=true;
@@ -151,7 +153,7 @@ internal sealed partial class ToolEditor:Window
 
     private void BeginDraw(object? sender,PointerPressedEventArgs e)
     {
-        if(tool is not ("crop" or "cropVideo")||!e.GetCurrentPoint(drawing).Properties.IsLeftButtonPressed)return;
+        if(tool is not ("crop" or "cropVideo" or "redactVideo")||!e.GetCurrentPoint(drawing).Properties.IsLeftButtonPressed)return;
         drawing.Focus();origin=Clamp(e.GetPosition(drawing));shiftHeld=e.KeyModifiers.HasFlag(KeyModifiers.Shift);dragging=true;e.Pointer.Capture(drawing);
         if(!BeginCropGesture(origin))StartSelection(origin);
         e.Handled=true;
@@ -194,8 +196,9 @@ internal sealed partial class ToolEditor:Window
         if(e.Key==Key.Enter&&e.KeyModifiers==KeyModifiers.None)
         {
             if(focused is Button)return;
-            Save();e.Handled=true;
+            Save();e.Handled=true;return;
         }
+        if(HandleMediaKey(e,focused))e.Handled=true;
     }
     private void Save()=>ReadSettings(true);
     private bool ReadSettings(bool accept)

@@ -31,6 +31,7 @@ internal sealed partial class MainWindow
         {
             if(choice.Id=="convert"){await ShowWheelAsync(WheelMode.Convert);return;}
             if(await RunDocumentRouteAsync(choice))return;
+            if(await RunMediaRouteAsync(choice))return;
             if(choice.Id.StartsWith("convert:",StringComparison.Ordinal)){await ConvertWithToastAsync(choice.Id[8..]);return;}
             if(FileActionIds.Contains(choice.Id)){await PerformFileAction(choice.Id,files.ToArray());return;}
             var id=choice.Id switch{"cropImage"=>"crop","annotateImage"=>"annotate","mergePDF"=>"mergePDFs",_=>choice.Id};
