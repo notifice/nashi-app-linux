@@ -141,6 +141,8 @@ internal sealed partial class MainWindow
         };
         // Drag-out of rows is deferred to the platform drag task.
     }
+    // Space preview: one window per request, closed with Space or Escape.
+    internal FilePreviewWindow PreviewFiles(IEnumerable<string> paths){var preview=new FilePreviewWindow(paths,tools);preview.Show(this);return preview;}
     private void OpenEntry(LibraryEntry entry){if(entry.AvailablePaths is {Length:>0} existing&&existing.All(File.Exists))Services.Shell.OpenUrl(new Uri(existing[0]).AbsoluteUri);else L10n.SetText(status,"These files have moved or were deleted.");}
     private void SelectCard(Guid id){selectedLibraryId=id;foreach(var pair in libraryCards)pair.Value.BorderBrush=Nashi.Linux.Theme.Brush(pair.Key==id?"Gold":"Line");}
     private void SelectLibrary(int direction)
@@ -160,6 +162,11 @@ internal sealed partial class MainWindow
         if(busy)return false;
         if(LibraryVisible&&key==Key.Down&&modifiers==KeyModifiers.None&&ReferenceEquals(focus,search)){SelectLibrary(1);return true;}
         if(ClipboardImport.IsEditing(focus))return false;
+        if(modifiers==KeyModifiers.None&&key==Key.Space&&focus is not Avalonia.Controls.Button)
+        {
+            if(LibraryVisible&&SelectedLibrary() is {} previewed&&previewed.AvailablePaths is {Length:>0} available){PreviewFiles(available);return true;}
+            if(currentPage=="home"&&list.IsKeyboardFocusWithin&&files.Count>0){PreviewFiles(list.SelectedItems?.Cast<string>().ToArray() is {Length:>0} chosen?chosen:files.ToArray());return true;}
+        }
         if(LibraryVisible&&modifiers==KeyModifiers.None&&key is Key.Up or Key.Down){SelectLibrary(key==Key.Down?1:-1);return true;}
         if(LibraryVisible&&modifiers==KeyModifiers.None&&key==Key.Enter&&focus is not Avalonia.Controls.Button){ReuseSelectedLibrary();return true;}
         if(modifiers==KeyModifiers.Control&&key==Key.V){_=ImportClipboardAsync();return true;}
