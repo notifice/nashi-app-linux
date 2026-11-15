@@ -33,7 +33,7 @@ internal sealed partial class MainWindow
         if(Services.Updates is null)return;
         var found=await Services.Updates.CheckAsync(CancellationToken.None);
         var owner=(Window?)settingsWindow??this;
-        if(found is null){if(Services.Dialogs is not null)await Services.Dialogs.InfoAsync(owner,L10n.Text("You are up to date. No newer release was found."),L10n.Text("Check for updates"));return;}
+        if(found is null){var failed=Services.Updates is Nashi.Linux.Platform.Linux.ReleaseNotifier{LastCheckFailed:true};if(Services.Dialogs is not null)await Services.Dialogs.InfoAsync(owner,L10n.Text(failed?"Couldn’t reach the release page. Check your connection and try again.":"You are up to date. No newer release was found."),L10n.Text("Check for updates"));return;}
         OfferUpdate(found);
         if(Services.Dialogs is not null&&await Services.Dialogs.ConfirmAsync(owner,string.Format(L10n.Text("Nashi {0} is available. Open the release page?"),found.Version),L10n.Text("Update available")))Services.Shell?.OpenUrl(found.Url);
     }

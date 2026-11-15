@@ -19,13 +19,16 @@ internal sealed class ReleaseNotifier:IUpdateInstaller
         http.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
     }
     internal static Version Normalize(Version v)=>new(Math.Max(v.Major,0),Math.Max(v.Minor,0),Math.Max(v.Build,0),Math.Max(v.Revision,0));
+    /// True when the last check could not reach or read the release feed (as opposed to "no newer release").
+    internal bool LastCheckFailed{get;private set;}
     public async Task<AvailableUpdate?> CheckAsync(CancellationToken token)
     {
+        LastCheckFailed=false;
         try
         {
             using var response=await http.GetAsync(LatestReleaseUrl,token);
             // 404 means the fork has no releases yet; 403/429 is the anonymous rate limit. Neither is worth bothering anyone about.
-            if(response.StatusCode!=HttpStatusCode.OK){if(response.StatusCode!=HttpStatusCode.NotFound)Console.Error.WriteLine("Release check: HTTP "+(int)response.StatusCode);return null;}
+            if(response.StatusCode!=HttpStatusCode.OK){if(response.StatusCode!=HttpStatusCode.NotFound){LastCheckFailed=true;Console.Error.WriteLine("Release check: HTTP "+(int)response.StatusCode);}return null;}
             using var json=JsonDocument.Parse(await response.Content.ReadAsStringAsync(token));
             var root=json.RootElement;
             if(root.ValueKind!=JsonValueKind.Object||!root.TryGetProperty("tag_name",out var tagElement)||!root.TryGetProperty("html_url",out var urlElement))return null;
@@ -39,7 +42,7 @@ internal sealed class ReleaseNotifier:IUpdateInstaller
             return Normalize(version)>Current?new AvailableUpdate(version.ToString(),url):null;
         }
         catch(Exception error)when(error is HttpRequestException or TaskCanceledException or JsonException or InvalidOperationException or IOException)
-        {
+        {LastCheckFailed=true;
             if(!token.IsCancellationRequested)Console.Error.WriteLine("Release check failed: "+error.Message);
             return null;
         }
