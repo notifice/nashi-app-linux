@@ -1,12 +1,13 @@
 using ImageMagick;
 using Nashi.Core;
+using PdfSharp.Drawing;
+using PdfSharp.Pdf;
 namespace Nashi.Engine;
 
 // Magick.NET port of Nashi.Windows/ImageEngine.cs. Pixels travel as PixelImage (straight BGRA8).
 public static partial class ImageEngine
 {
     public static readonly string[] Formats=["png","jpg","webp","heic","avif","bmp","gif","tiff","pdf"];
-    private static readonly string[] Unsupported=["createCollage","createPDF","frameImage","redactImage","compress","annotate"];
     private const string TooLarge="This image is too large (100 MP limit).";
     private const string BadSize="Choose dimensions between 1 and 30,000 pixels (100 MP limit).";
 
@@ -49,8 +50,12 @@ public static partial class ImageEngine
     public static void Save(PixelImage image,string output,string format,int quality=85,string? encoderPath=null,CancellationToken token=default)
     {
         token.ThrowIfCancellationRequested();
-        if(format=="pdf")throw new NotSupportedException("pdf is not available on Linux yet.");
         if(File.Exists(output))throw new IOException("The output file already exists.");
+        if(format=="pdf")
+        {
+            using var png=new MemoryStream(PngBytes(image));using var pdf=new PdfDocument();var page=pdf.AddPage();page.Width=XUnit.FromPoint(image.Width*72/96d);page.Height=XUnit.FromPoint(image.Height*72/96d);
+            using var graphic=XGraphics.FromPdfPage(page);using var resource=XImage.FromStream(png);graphic.DrawImage(resource,0,0,page.Width.Point,page.Height.Point);pdf.Save(output);return;
+        }
         var pixels=image.Bgra;
         // JPEG and BMP have no usable alpha; unflattened transparent areas would turn black.
         if(format is "jpg" or "bmp")
@@ -63,9 +68,18 @@ public static partial class ImageEngine
 
     public static IReadOnlyList<string> Apply(string tool,IReadOnlyList<string> inputs,string destination,ImageOptions options,string? format=null,CancellationToken token=default,IProgress<OperationProgress>? progress=null)
     {
-        if(Unsupported.Contains(tool))throw new NotSupportedException($"{tool} is not available on Linux yet.");
-        if(tool is not("resize" or "crop" or "rotate" or "flip" or "editImage" or "convert" or "removeMetadata"))throw new ArgumentException("Unsupported image tool.");
+        if(tool is not("resize" or "crop" or "rotate" or "flip" or "editImage" or "convert" or "removeMetadata" or "createCollage" or "createPDF" or "frameImage" or "redactImage" or "compress" or "annotate"))throw new ArgumentException("Unsupported image tool.");
         using var tx=new ExportTransaction(destination);var outputs=new List<string>();var completed=0;
+        if(tool=="createCollage")
+        {
+            var result=Collage(inputs,options.Collage,token);var file=Path.Combine(tx.StagingDirectory,"Collage.png");Save(result,file,"png");progress?.Report(new(.99,"Saving collage…"));return tx.Publish([file],token);
+        }
+        if(tool=="createPDF")
+        {
+            var file=Path.Combine(tx.StagingDirectory,"Images.pdf");using var pdf=new PdfDocument();
+            foreach(var input in inputs){token.ThrowIfCancellationRequested();var source=Load(input);using var png=new MemoryStream(PngBytes(source));using var image=XImage.FromStream(png);var page=pdf.AddPage();page.Width=XUnit.FromPoint(source.Width*72/96d);page.Height=XUnit.FromPoint(source.Height*72/96d);using var g=XGraphics.FromPdfPage(page);g.DrawImage(image,0,0,page.Width.Point,page.Height.Point);progress?.Report(new(++completed/(double)inputs.Count*.98,"Adding pages…"));}
+            pdf.Save(file);return tx.Publish([file],token);
+        }
         foreach(var input in inputs)
         {
             token.ThrowIfCancellationRequested();var image=options.Annotated??Load(input);var ext=(format??Path.GetExtension(input).TrimStart('.')).ToLowerInvariant();if(ext=="jpeg")ext="jpg";if(ext=="tif")ext="tiff";
@@ -83,10 +97,14 @@ public static partial class ImageEngine
                 case "editImage":
                     image=FromPng(PhotoCodec.Adjust(PngBytes(image),options.Adjustments));
                     image=TransformPhoto(image,options);break;
-                case "convert":case "removeMetadata":break;
+                case "frameImage":image=Frame(image,options.Frame);ext="png";break;
+                // Like macOS, keep the source format. Writing HEIC needs the media tools, so without them a HEIC source keeps the PNG output.
+                case "redactImage":image=Redact(image,options.Redactions,options.RedactionStyle);if(ext=="heic"&&options.EncoderPath is null)ext="png";break;
+                case "convert":case "compress":case "removeMetadata":case "annotate":break;
             }
+            if(tool=="compress"&&!new[]{"jpg","png","heic","webp","avif"}.Contains(ext))ext="jpg";
             var output=SafePaths.Unique(tx.StagingDirectory,Path.GetFileNameWithoutExtension(input)+(tool=="convert"?"":" "+tool)+"."+ext);
-            Save(image,output,ext,options.Quality,options.EncoderPath,token);outputs.Add(output);progress?.Report(new(++completed/(double)inputs.Count*.98,"Saving images…"));
+            if(tool=="compress")CompressImage(image,input,output,ext,options,token,progress);else Save(image,output,ext,options.Quality,options.EncoderPath,token);outputs.Add(output);progress?.Report(new(++completed/(double)inputs.Count*.98,"Saving images…"));
         }
         return tx.Publish(outputs,token);
     }
