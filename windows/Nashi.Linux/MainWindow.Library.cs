@@ -14,8 +14,8 @@ using Nashi.Engine;
 using Nashi.Linux.Platform;
 namespace Nashi.Linux;
 
-// Port of the Library page from Nashi.Windows/MainWindow.cs and MainWindow.Library.cs. MainWindow.cs has no page seam,
-// so InitLibrary wraps the home scroll viewer in a Grid, adds the page beside it and puts Home/Library buttons in the header.
+// Port of the Library page from Nashi.Windows/MainWindow.cs and MainWindow.Library.cs. The page and the Home/Library
+// header buttons attach through MainWindow's AddPage/ShowPage/AddHeaderButton seams.
 internal sealed partial class MainWindow
 {
     private readonly StackPanel libraryPage=new(),libraryRows=new(),recentRows=new();
@@ -23,23 +23,19 @@ internal sealed partial class MainWindow
     private readonly TextBox recentSearch=new(){Width=165,PlaceholderText="Find a recent file"};
     private readonly TextBlock recentCount=Text("0",11,"Muted");
     private readonly Dictionary<Guid,Border> libraryCards=[];
-    private ScrollViewer? libraryScroll,homeScroll;
+    private ScrollViewer? libraryScroll;
     private Button? homeButton,libraryButton;
     private Guid? selectedLibraryId;
     // Smoke checks render fixed rows here instead of writing into the user's real Library.
     private IReadOnlyList<LibraryEntry>? previewEntries;
-    internal bool LibraryVisible=>libraryScroll?.IsVisible==true;
+    internal bool LibraryVisible=>currentPage=="library";
     internal int LibraryRowCount=>libraryCards.Count;
 
     partial void InitLibrary()
     {
-        var root=(DockPanel)Content!;
-        var header=(DockPanel)root.Children[0];
-        var controls=header.Children.OfType<WrapPanel>().First();
-        homeScroll=root.Children.OfType<ScrollViewer>().First();
         homeButton=Button("Home",()=>ShowLibrary(false));libraryButton=Button("Library",()=>ShowLibrary(true));
         homeButton.Margin=new(0,0,6,0);libraryButton.Margin=new(0,0,12,0);homeButton.FontSize=libraryButton.FontSize=11;
-        controls.Children.Insert(0,libraryButton);controls.Children.Insert(0,homeButton);
+        AddHeaderButton(homeButton);AddHeaderButton(libraryButton);
         L10n.SetTip(homeButton,"Home  ·  Ctrl+1");L10n.SetTip(libraryButton,"Library  ·  Ctrl+2");
 
         libraryPage.Children.Add(Text("Your Library",30));libraryPage.Children.Add(Text("Freshly made, pasted, and ready for another round.",14,"Muted"));
@@ -47,7 +43,7 @@ internal sealed partial class MainWindow
         L10n.Bind(search,TextBox.PlaceholderTextProperty,"Find a file or tool");search.Margin=new(0,0,0,12);search.HorizontalAlignment=HorizontalAlignment.Stretch;
         libraryPage.Children.Add(search);libraryPage.Children.Add(libraryRows);search.TextChanged+=(_,_)=>RenderLibraryRows();
         libraryScroll=new ScrollViewer{Content=libraryPage,IsVisible=false,VerticalScrollBarVisibility=Avalonia.Controls.Primitives.ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled};
-        var pages=new Grid();root.Children.Remove(homeScroll);pages.Children.Add(homeScroll);pages.Children.Add(libraryScroll);root.Children.Add(pages);
+        AddPage("library",libraryScroll);
 
         // Recent section on Home, above the "Tools & shortcuts" expander (last home child).
         var recentHeading=new DockPanel{Margin=new(0,24,0,10)};
@@ -62,11 +58,11 @@ internal sealed partial class MainWindow
 
     internal void ShowLibrary(bool visible)
     {
-        if(libraryScroll is null||homeScroll is null)return;
+        if(libraryScroll is null)return;
         var changed=LibraryVisible!=visible;
         if(!busy)L10n.SetText(status,"Files stay on your computer.");
         selectedLibraryId??=LibraryEntries().FirstOrDefault()?.Id;
-        homeScroll.IsVisible=!visible;libraryScroll.IsVisible=visible;
+        ShowPage(visible?"library":"home");
         Nashi.Linux.Theme.Res(homeButton!,Avalonia.Controls.Primitives.TemplatedControl.BackgroundProperty,visible?"Surface":"Sage");Nashi.Linux.Theme.Res(libraryButton!,Avalonia.Controls.Primitives.TemplatedControl.BackgroundProperty,visible?"Sage":"Surface");
         if(visible)RenderLibraryRows();
         if(changed&&IsLoaded)Nashi.Linux.Theme.Entrance(visible?libraryPage:home);

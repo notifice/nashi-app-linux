@@ -32,10 +32,17 @@ internal sealed partial class MainWindow:Window
     private readonly PreferencesStore preferences;
     private readonly StackPanel home=new(),workArea=new();
     private readonly DockPanel manage=new();private readonly FileGarden garden=new();
-    private readonly ComboBox formatPicker=new(){MinWidth=120};
-    private Button? chooseFilesButton,convertButton;private readonly ComboBox appearance;
+    private Button? chooseFilesButton,openWheelButton;private readonly ComboBox appearance;
+    // Page seams: Library, Settings and later pages attach through AddPage/ShowPage/AddHeaderButton instead of walking the layout tree.
+    private readonly WrapPanel headerControls=new(){HorizontalAlignment=HorizontalAlignment.Right,VerticalAlignment=VerticalAlignment.Center};
+    private readonly Grid pageHost=new();
+    private readonly Dictionary<string,Control> pages=[];
+    private ScrollViewer homePage=null!;
+    private string currentPage="home";
+    private int headerButtonCount;
     private bool busy;
     internal IReadOnlyList<string> SelectedFiles=>files;
+    internal void ClearFilesForTest(){files.Clear();Refresh();}
     public MainWindow(string[] args)
     {
         launchArgs=args;
@@ -44,12 +51,12 @@ internal sealed partial class MainWindow:Window
         Icon=new WindowIcon(FileGarden.Artwork("NashiIcon"));
         var root=new DockPanel{Margin=new(28,18,28,18)};Content=root;
         var header=new DockPanel{Margin=new(0,0,0,18)};DockPanel.SetDock(header,Dock.Top);root.Children.Add(header);
-        var controls=new WrapPanel{HorizontalAlignment=HorizontalAlignment.Right,VerticalAlignment=VerticalAlignment.Center};DockPanel.SetDock(controls,Dock.Right);header.Children.Add(controls);
+        var controls=headerControls;DockPanel.SetDock(controls,Dock.Right);header.Children.Add(controls);
         appearance=new ComboBox{ItemsSource=new[]{"System","Light","Dark"},SelectedItem=char.ToUpper(library.Appearance[0])+library.Appearance[1..],FontSize=11,Margin=new(10,0,0,0)};L10n.Choices(appearance);appearance.SelectionChanged+=(_,_)=>ChangeAppearance();
         var onPc=Text("On your PC",11,"Muted");onPc.VerticalAlignment=VerticalAlignment.Center;controls.Children.Add(onPc);controls.Children.Add(appearance);
         var brand=new StackPanel{Orientation=Orientation.Horizontal};brand.Children.Add(new Image{Source=FileGarden.Artwork("NashiMark"),Width=40,Height=40,Margin=new(0,0,10,0)});brand.Children.Add(Text("Nashi",19));header.Children.Add(brand);
         var bottom=new StackPanel();DockPanel.SetDock(bottom,Dock.Bottom);status.Margin=new(4,14,4,0);bottom.Children.Add(status);bottom.Children.Add(progress);root.Children.Add(bottom);
-        var homeScroll=new ScrollViewer{Content=home,VerticalScrollBarVisibility=Avalonia.Controls.Primitives.ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled};root.Children.Add(homeScroll);
+        homePage=new ScrollViewer{Content=home,VerticalScrollBarVisibility=Avalonia.Controls.Primitives.ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled};root.Children.Add(pageHost);AddPage("home",homePage);ShowPage("home");
         home.Children.Add(homeTitle);var intro=Text("Convert, fine-tune, and send them on their way.",14,"Muted");intro.Margin=new(0,6,0,22);home.Children.Add(intro);
         home.Children.Add(workArea);
         var drop=new Grid();drop.ColumnDefinitions.Add(new(1,GridUnitType.Star));drop.ColumnDefinitions.Add(new(166,GridUnitType.Pixel));
@@ -58,11 +65,9 @@ internal sealed partial class MainWindow:Window
         Grid.SetColumn(garden,1);drop.Children.Add(garden);
         var dropStack=new StackPanel();dropStack.Children.Add(drop);list.ItemsSource=files;list.ItemTemplate=new FuncDataTemplate<string>((path,_)=>FileRow(path));
         var clear=Button("Clear",()=>{files.Clear();Refresh();});DockPanel.SetDock(clear,Dock.Right);manage.Children.Add(clear);manage.Children.Add(list);dropStack.Children.Add(manage);workArea.Children.Add(Card(dropStack));
-        // Temporary stand-in for the conversion wheel: pick an output format and convert the selection.
-        L10n.Choices(formatPicker,new ChoiceTextConverter());convertButton=Primary("Convert",async()=>await ConvertSelectedAsync());
-        var convert=new DockPanel{Margin=new(0,10,0,0)};DockPanel.SetDock(convertButton,Dock.Right);convertButton.Margin=new(10,0,0,0);convert.Children.Add(convertButton);convert.Children.Add(formatPicker);
-        var convertCaption=new StackPanel{Margin=new(0,0,0,10)};convertCaption.Children.Add(Text("Convert",17));convertCaption.Children.Add(Text("Pick a format for the selected files.",12,"Muted"));
-        var convertStack=new StackPanel();convertStack.Children.Add(convertCaption);convertStack.Children.Add(convert);actions.Children.Add(Card(convertStack));workArea.Children.Add(actions);
+        // The wheel opens from this button, Ctrl+Space or Enter; it replaces the old format picker.
+        openWheelButton=Primary("Open wheel  ·  Ctrl+Space",()=>ShowWheel());L10n.SetTip(openWheelButton,"Tools, conversions and file actions");openWheelButton.HorizontalAlignment=HorizontalAlignment.Left;openWheelButton.Margin=new(0,10,0,0);
+        var wheelCaption=new StackPanel();wheelCaption.Children.Add(Text("Tools & conversions",17));wheelCaption.Children.Add(Text("Convert, resize, crop and more for the selected files.",12,"Muted"));wheelCaption.Children.Add(openWheelButton);actions.Children.Add(Card(wheelCaption));workArea.Children.Add(actions);
         var footer=new WrapPanel{Margin=new(0,8,0,0)};var mediaBtn=Button("Set up media tools",async()=>await SetupAsync());mediaBtn.Padding=new(12,7,12,7);mediaBtn.FontSize=12;footer.Children.Add(mediaBtn);home.Children.Add(new Expander{Header="Tools & shortcuts",Content=footer,Margin=new(4,8,4,0)});
         Closing+=(_,e)=>{if(busy){e.Cancel=true;L10n.SetText(status,"Finish the current operation or choose Cancel before closing Nashi.");}};
         AddHandler(DragDrop.DragOverEvent,(object? _,DragEventArgs e)=>{e.DragEffects=!busy&&Services.Drop?.Accepts(e)==true?DragDropEffects.Copy:DragDropEffects.None;e.Handled=true;});
@@ -72,10 +77,11 @@ internal sealed partial class MainWindow:Window
         Add(args.Where(a=>!a.StartsWith('-')));Refresh();Opened+=(_,_)=>Nashi.Linux.Theme.Entrance(home);
         if(library.RecoveryNotice is {} notice)L10n.SetText(status,notice);
         else if(preferences.RecoveryNotice is {} settingsNotice)L10n.SetText(status,settingsNotice);
-        InitLibrary();InitSettings();InitDocuments();InitWeb();InitFileActions();InitDesktop();
+        InitLibrary();InitSettings();InitTools();InitDocuments();InitWeb();InitFileActions();InitDesktop();
     }
     partial void InitLibrary();      // P2-E
     partial void InitSettings();     // P2-F
+    partial void InitTools();        // wheel and tool flow (MainWindow.Tools.cs)
     partial void InitDocuments();    // P3-B
     partial void InitWeb();          // P3-C
     partial void InitFileActions();  // P3-D
@@ -113,14 +119,18 @@ internal sealed partial class MainWindow:Window
     }
     internal void AddFiles(IEnumerable<string> paths){foreach(var path in paths.Where(p=>File.Exists(p)||Directory.Exists(p))){var full=Path.GetFullPath(path);if(!files.Contains(full))files.Add(full);}Refresh();}
     private void Add(IEnumerable<string> paths)=>AddFiles(paths);
+    /// Smoke hook: when set, Record appends here instead of writing into the user's real Library.
+    internal List<(string Label,string[] Paths)>? RecordedForTest{get;set;}
     private void Record(string label,IReadOnlyList<string> paths)
     {
+        if(RecordedForTest is not null){RecordedForTest.Add((label,paths.ToArray()));return;}
         try{library.Record(label,paths);RenderLibraryRows();}catch(Exception error)when(error is IOException or UnauthorizedAccessException){L10n.SetText(status,"Your files are ready, but Library could not be saved.");}
     }
     internal bool HandleShortcut(Key key,KeyModifiers modifiers)
     {
         if(busy)return false;
         if(modifiers==KeyModifiers.Control&&key==Key.O){Choose();return true;}
+        if(modifiers==KeyModifiers.Control&&key==Key.Space&&currentPage=="home"){ShowWheel();return true;}
         if(modifiers==KeyModifiers.None&&key==Key.Delete&&list.IsKeyboardFocusWithin)
         {
             var selected=list.SelectedItems?.Cast<string>().ToArray()??[];if(selected.Length==0)return false;
@@ -141,10 +151,19 @@ internal sealed partial class MainWindow:Window
         else{L10n.SetText(selection,files.Count==0?"Drop something good.":$"{files.Count} files, ready to go.");L10n.SetText(fileDescription,files.Count==0?"Images, videos, documents, and all the little things in between.":"Keep them together, or give each one a fresh start.");}
         if(chooseFilesButton is not null){L10n.Bind(chooseFilesButton,ContentControl.ContentProperty,files.Count==0?"Choose files":"Add or change files");if(files.Count==0){chooseFilesButton.Background=Nashi.Linux.Theme.Primary;chooseFilesButton.Foreground=new SolidColorBrush(Color.FromRgb(43,54,28));}else{Nashi.Linux.Theme.Res(chooseFilesButton,Avalonia.Controls.Primitives.TemplatedControl.BackgroundProperty,"Surface");Nashi.Linux.Theme.Res(chooseFilesButton,Avalonia.Controls.Primitives.TemplatedControl.ForegroundProperty,"Ink");}}
         manage.IsVisible=files.Count>0;garden.SetSelected(files.Count>0);
-        var formats=FeatureCatalog.Formats(files);var previous=formatPicker.SelectedItem as string;formatPicker.ItemsSource=formats;formatPicker.SelectedItem=previous is not null&&formats.Contains(previous)?previous:formats.FirstOrDefault();
-        actions.IsVisible=formats.Length>0;
+        actions.IsVisible=files.Count>0;
     }
-    private void SetBusy(bool value){busy=value;workArea.IsEnabled=!value;appearance.IsEnabled=!value;progress.IsVisible=value;progress.IsIndeterminate=true;}
+    private void SetBusy(bool value){busy=value;workArea.IsEnabled=!value;appearance.IsEnabled=!value;progress.IsVisible=value;progress.IsIndeterminate=true;UpdateToolsSetupLabel();}
+    /// Adds a page to the host beside Home. Pages start hidden; ShowPage switches between them.
+    internal void AddPage(string key,Control page){pages[key]=page;page.IsVisible=key==currentPage;if(!pageHost.Children.Contains(page))pageHost.Children.Add(page);}
+    internal void ShowPage(string key)
+    {
+        if(!pages.ContainsKey(key))throw new ArgumentException("Unknown page "+key);
+        currentPage=key;foreach(var (name,page) in pages)page.IsVisible=name==key;
+    }
+    internal string CurrentPage=>currentPage;
+    /// Adds a button to the header, before the "On your PC" label and appearance picker, in call order.
+    internal void AddHeaderButton(Control button){headerControls.Children.Insert(Math.Min(headerButtonCount,headerControls.Children.Count),button);headerButtonCount++;}
     private string OutputDirectory(IReadOnlyList<string> inputs)=>preferences.Value.OutputMode=="folder"&&!string.IsNullOrWhiteSpace(preferences.Value.OutputFolder)?preferences.Value.OutputFolder:Path.GetDirectoryName(inputs[0])!;
     /// Converts the current selection to <paramref name="format"/> off the UI thread and returns the written paths. Used by the Convert button and the smoke test.
     internal async Task<IReadOnlyList<string>> ConvertAsync(string format,IProgress<OperationProgress>? report=null,CancellationToken token=default)
@@ -166,16 +185,26 @@ internal sealed partial class MainWindow:Window
         }
         throw new NotSupportedException("Document conversion isn’t available on Linux yet.");
     }
-    private async Task ConvertSelectedAsync()
+    /// Runs <paramref name="work"/> with the busy state, progress toast, Library record and status line shared by every tool.
+    private async Task RunWithToastAsync(string label,Func<IProgress<OperationProgress>,CancellationToken,Task<IReadOnlyList<string>>> work)
     {
-        if(busy||files.Count==0||formatPicker.SelectedItem is not string format)return;
-        if((Video||Audio)&&!tools.Ready){await SetupAsync();if(!tools.Ready)return;}
+        if(busy)return;
         SetBusy(true);using var cancellation=new CancellationTokenSource();var toast=new ToastWindow(this,cancellation.Cancel);toast.Show(this);
         var report=new Progress<OperationProgress>(p=>Dispatcher.UIThread.Post(()=>{toast.Update(p);L10n.SetText(status,p.Label);progress.IsIndeterminate=p.Fraction is null;if(p.Fraction is {} fraction)progress.Value=Math.Clamp(fraction,0,1);}));
-        try{var outputs=await ConvertAsync(format,report,cancellation.Token);toast.Complete(outputs);Record("Convert to "+format.ToUpperInvariant(),outputs);L10n.SetText(status,$"Saved {outputs.Count} new {(outputs.Count==1?"file":"files")}. Originals kept.");}
+        try
+        {
+            var outputs=await work(report,cancellation.Token);toast.Complete(outputs);Record(label,outputs);L10n.SetText(status,$"Saved {outputs.Count} new {(outputs.Count==1?"file":"files")}. Originals kept.");
+            if(preferences.Value.RevealFinished&&outputs.Count>0)Services.Shell?.Reveal(outputs[0]);
+        }
         catch(OperationCanceledException){toast.Close();L10n.SetText(status,"Cancelled. Originals kept.");}
         catch(Exception error){toast.Close();await ShowInfoAsync(error.Message,"Couldn’t finish");}
         finally{SetBusy(false);}
+    }
+    private async Task ConvertWithToastAsync(string format)
+    {
+        if(busy||files.Count==0)return;
+        if((Video||Audio)&&!tools.Ready){await SetupAsync();if(!tools.Ready)return;}
+        await RunWithToastAsync("Convert to "+format.ToUpperInvariant(),(report,token)=>ConvertAsync(format,report,token));
     }
     private async Task ShowInfoAsync(string message,string title)
     {

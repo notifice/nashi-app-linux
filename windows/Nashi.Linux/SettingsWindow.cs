@@ -37,7 +37,7 @@ internal sealed partial class SettingsWindow:Window
     }
     private void Pick(string title,string[] values,string value,Action<string> save)
     {
-        Caption(page,title);var combo=new ComboBox{ItemsSource=values,SelectedItem=value};
+        Caption(page,title);var combo=new ComboBox{ItemsSource=values,SelectedItem=value};L10n.Choices(combo,new ChoiceTextConverter());
         combo.SelectionChanged+=(_,_)=>{if(combo.SelectedItem is string selected)save(selected);};page.Children.Add(combo);
     }
     private void LanguagePicker()
