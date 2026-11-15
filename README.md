@@ -28,6 +28,7 @@ Windows screenshot: native UI test capture from the released 0.7.5 code, verifie
 
 - **[macOS ZIP · Apple Silicon, macOS 13+](https://github.com/orkunisitmak/nashi-app/releases/latest/download/Nashi-macOS-arm64.zip):** extract, move Nashi.app to your Applications folder and open it. The full macOS catalog has 27 tools, 46 input formats and 276 conversion routes.
 - **[Windows x64 ZIP](https://github.com/orkunisitmak/nashi-app/releases/latest/download/Nashi-Windows-x64.zip):** extract the entire archive into its own writable folder, then open Nashi.exe. No separate .NET install is required. Keep the folder together so portable updates can replace the app safely. [Windows features and differences](windows/README.md).
+- **Linux x64 (Avalonia):** no release yet. Build from source; see the [Linux guide](windows/Nashi.Linux/README.md).
 
 First launch guides you through **Finish setup → Download missing tools** for hash-verified downloads directly from upstream. Media and Office tools install in sequence; existing tools are kept, and cancelled or failed setup can be retried. **Tools ready** appears only when both groups are available. Core native image/PDF features work immediately. [Exact versions, hashes and licenses](docs/dependencies.md).
 
@@ -51,6 +52,8 @@ scripts/build-app.sh release
 ```
 
 The public app is written to `build/Nashi.app`. Large runtimes are installed through its setup screen. Source builds use an ad-hoc signature unless you provide your own ignored signing profile. Signing private keys are never distributed. [Windows build instructions](windows/README.md).
+
+For Linux (x64, .NET 10 SDK): `dotnet build windows/Nashi.Linux -c Release`, then see the [Linux guide](windows/Nashi.Linux/README.md) for running, tests and packaging.
 
 ## Privacy and updates
 

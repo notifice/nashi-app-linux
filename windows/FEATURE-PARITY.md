@@ -23,6 +23,24 @@ These features are included in the published [0.7.5 release](https://github.com/
 
 Windows uses Explorer, Windows keyboard conventions and Windows Share. Apple AirDrop has no Windows implementation; Windows Share is the corresponding file action. OCR requires a Windows OCR language. Optional media, Office and metadata runtimes are downloaded from pinned upstream packages into the user's Nashi tools directory without administrator installation. Native playback uses Windows codecs, with an FFmpeg preview proxy fallback.
 
+## Linux (Avalonia) status
+
+`windows/Nashi.Linux` shares the engine with the Windows app; see its [README](Nashi.Linux/README.md). Evidence is the `windows/Nashi.Linux.Verify` checks and the `--smoke-test` run under Xvfb in the `linux-desktop` CI job. Wayland-native behavior, physical-desktop drag and drop and real tray hosts are not covered by those runs.
+
+| Area | Linux | Differs from Windows / dropped |
+| --- | --- | --- |
+| Drag wheels | Tools, conversion and file-action wheel from the Home button, Ctrl+Space or Enter | Global drag wheel, window-management wheel, global drag chords and modifiers are dropped |
+| Home / Library / clipboard / settings | Same pages, themes, search and persistence; settings under `$XDG_CONFIG_HOME` | Drag-shortcut, window-management and Explorer-reveal settings are hidden |
+| Images | Resize, crop, rotate, flip, photo adjustments with live preview, compress, images to PDF | Frame, collage, redact and annotate tools show "isn't available on Linux yet" |
+| Media | FFmpeg/ffprobe conversion and tools; media editor uses ffmpeg still frames only | No audio/video playback preview ("Playback preview isn't available yet"); still frames only |
+| PDF | Organizer, merge/split, page export, QR; PDFium Linux native library | None known |
+| Documents | Office/Pages conversions via the system LibreOffice (never downloaded) | LibreOffice must be installed by the user |
+| OCR / faces | OCR through the system `tesseract` | Face detection is dropped; no faces are returned |
+| Metadata | ExifTool run by the system Perl | `perl` required |
+| Web | yt-dlp and Deno via setup or system | Same service-availability caveats |
+| File actions / Float | Copy, move, copy path, terminal, Float shelf and drag-out | Share is dropped; `.lnk` shortcuts are not handled |
+| Preferences / tray / update | XDG autostart; StatusNotifier tray when a host exists | No tray without a StatusNotifier host. Updates: Linux only notifies and opens the release page (update check not wired up in the current code) |
+
 ## Commands and evidence
 
 - `dotnet run --project windows/Nashi.Verify -c Release` runs platform-independent engine/security tests; media tests require the explicit `NASHI_VERIFY_FFMPEG` / `NASHI_VERIFY_FFPROBE` paths or CI tool setup.

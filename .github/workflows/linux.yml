@@ -30,3 +30,44 @@ jobs:
           NASHI_VERIFY_DOWNLOAD_TOOLS: '1'
           NASHI_VERIFY_TOOLS_DIRECTORY: '${{ runner.temp }}/Nashi-Test-Tools'
         run: dotnet run --project windows/Nashi.Verify -c Release --no-build
+  linux-desktop:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore and build the Linux desktop projects
+        run: |
+          dotnet restore windows/Nashi.Engine --locked-mode
+          dotnet restore windows/Nashi.Linux --locked-mode
+          dotnet restore windows/Nashi.Linux.Verify --locked-mode
+          dotnet build windows/Nashi.Linux.Verify -c Release --no-restore
+          dotnet build windows/Nashi.Linux -c Release --no-restore
+      - name: Linux engine and platform checks
+        run: dotnet run --project windows/Nashi.Linux.Verify -c Release --no-build
+      - name: Install a virtual display and runtime dependencies
+        # xvfb gives the smoke test a real X11 server; tesseract is the OCR backend the app calls on PATH.
+        # The remaining libraries are the X11/fontconfig set Avalonia's Linux backend loads at run time.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb tesseract-ocr tesseract-ocr-eng libice6 libsm6 libfontconfig1 libx11-6 libxcursor1 libxrandr2 libxi6
+      - name: Native desktop smoke test under Xvfb
+        env:
+          NASHI_SMOKE_DIRECTORY: build/linux-smoke
+        run: xvfb-run -a dotnet run --project windows/Nashi.Linux -c Release --no-build -- --smoke-test
+      - name: Package (tar.gz and AppImage)
+        run: |
+          if [ -f scripts/package-linux.sh ]; then bash scripts/package-linux.sh; else echo "::warning::scripts/package-linux.sh not present yet; packaging skipped"; fi
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        if: always()
+        with:
+          name: linux-preview
+          path: |
+            build/*.tar.gz
+            build/linux-smoke
+          retention-days: 7
+          if-no-files-found: error
