@@ -83,14 +83,13 @@ internal sealed partial class ToolEditor
         }
         catch(Exception error)when(error is ArgumentException or FormatException or InvalidDataException or ImageMagick.MagickException or IOException or NotSupportedException){ToolTip.SetTip(this,error.Message);}finally{previewGate.Release();}
     }
-    // ImageEngine.TransformPhoto is internal and the Nashi.Engine InternalsVisibleTo names "Nashi.Linux" while this assembly
-    // is called "Nashi", so the preview runs the public Apply on an in-memory image (Annotated replaces the file read).
-    private static PixelImage RunPipeline(string pipeline,string name,PixelImage image,ImageOptions settings)
+    // Same steps as ImageEngine.Apply for these tools, in memory: no temp files per preview tick.
+    private static PixelImage RunPipeline(string pipeline,string name,PixelImage image,ImageOptions settings)=>pipeline switch
     {
-        var directory=System.IO.Path.Combine(System.IO.Path.GetTempPath(),"nashi-preview-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(directory);
-        try{var output=ImageEngine.Apply(pipeline,[name],directory,settings with{Annotated=image},"png").Single();return ImageEngine.Load(output);}
-        finally{try{Directory.Delete(directory,true);}catch(IOException){}}
-    }
+        "resize"=>ImageEngine.TransformPhoto(image,new ImageOptions(settings.Width,settings.Height)),
+        "editImage"=>ImageEngine.TransformPhoto(ImageEngine.FromPng(Nashi.Core.PhotoCodec.Adjust(ImageEngine.PngBytes(image),settings.Adjustments)),settings),
+        _=>throw new ArgumentException("Unsupported preview pipeline: "+pipeline+" ("+name+")")
+    };
     private void SetPhotoPreview(Avalonia.Media.Imaging.Bitmap result)
     {
         drawing.Width=result.PixelSize.Width;drawing.Height=result.PixelSize.Height;
