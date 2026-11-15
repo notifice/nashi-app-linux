@@ -14,5 +14,5 @@ internal static class Ui
     }
     internal static Border Card(Control content){var card=new Border{CornerRadius=new(24),Padding=new(22),Margin=new(0,0,0,6),Child=content,BorderThickness=new(1)};Theme.Res(card,Border.BackgroundProperty,"Surface");Theme.Res(card,Border.BorderBrushProperty,"Line");return card;}
     internal static Button Button(string title,Action action){var button=L10n.Content(new Button{Content=title});button.Click+=(_,_)=>action();return button;}
-    internal static Button Primary(string title,Action action){var button=Button(title,action);button.Background=Theme.Primary;button.Foreground=new SolidColorBrush(Color.FromRgb(43,54,28));return button;}
+    internal static Button Primary(string title,Action action){var button=Button(title,action);button.Classes.Add("primary");return button;}
 }

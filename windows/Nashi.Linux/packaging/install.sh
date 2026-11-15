@@ -35,7 +35,7 @@ cp -a "$SRC/." "$OPT/"
 ln -sfn "$OPT/Nashi" "$LINK"
 
 # Absolute Exec so the launcher works even when ~/.local/bin is not on the desktop session PATH.
-sed "s|^Exec=nashi |Exec=$OPT/Nashi |" "$SRC/nashi.desktop" > "$DESKTOP"
+sed "s|^Exec=nashi\\b|Exec=$OPT/Nashi|" "$SRC/nashi.desktop" > "$DESKTOP"
 
 mkdir -p "$DATA/icons/hicolor/256x256/apps"
 cp "$SRC/nashi-256.png" "$DATA/icons/hicolor/256x256/apps/nashi.png"

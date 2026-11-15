@@ -20,14 +20,18 @@ internal static class Program
         if(!instance.Primary)
         {
             // Relative paths mean nothing to the running instance, whose working directory differs.
-            var forwarded=args.Where(a=>a=="--download-clipboard"||(!a.StartsWith('-')&&(File.Exists(a)||Directory.Exists(a)))).Select(a=>a.StartsWith('-')?a:Path.GetFullPath(a)).ToArray();
-            try{instance.Notify(forwarded).GetAwaiter().GetResult();instance.Dispose();return 0;}
+            var forwarded=args.Where(a=>a=="--download-clipboard"||a=="--wheel"||(!a.StartsWith('-')&&(File.Exists(a)||Directory.Exists(a)))).Select(a=>a.StartsWith('-')?a:Path.GetFullPath(a)).ToList();
+            // The wheel shortcut: this process still sees the Wayland clipboard, the running instance does not.
+            if(args.Contains("--wheel"))forwarded.AddRange(Platform.Linux.CopiedFiles.Read());
+            try{instance.Notify(forwarded.ToArray()).GetAwaiter().GetResult();instance.Dispose();return 0;}
             catch(Exception error)when(error is IOException or OperationCanceledException or System.Net.Sockets.SocketException or UnauthorizedAccessException)
             {
                 Console.Error.WriteLine("Nashi is already running but is still starting. Open it from the system tray or try again in a moment.");instance.Dispose();return 1;
             }
         }
         Instance=instance;
+        // First launch by the shortcut: the copied files ride along as ordinary launch args and MainWindow opens the wheel once shown.
+        if(args.Contains("--wheel"))args=args.Where(a=>a!="--wheel").Concat(Platform.Linux.CopiedFiles.Read()).Prepend("--wheel").ToArray();
         try{return BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);}
         finally{instance.Dispose();}
     }

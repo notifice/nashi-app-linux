@@ -13,7 +13,7 @@ internal sealed partial class MainWindow
     private readonly TextBox webLink=new();
     private readonly ComboBox downloadKind=new(){ItemsSource=new[]{"video","audio","thumbnail"},SelectedIndex=0,MinWidth=110};
     private readonly ComboBox webQuality=new(){ItemsSource=WebMediaOptions.QualityLabels,SelectedIndex=0};
-    private readonly TextBlock webSummary=new(){Text="Paste a public media link to begin.",TextWrapping=Avalonia.Media.TextWrapping.Wrap,Margin=new(4,12,4,12)};
+    private readonly TextBlock webSummary=new(){Text="Paste a public media link to begin.",TextWrapping=Avalonia.Media.TextWrapping.Wrap,Margin=new(0,6,0,12)};
     private readonly StackPanel photoChoices=new(),webContent=new();
     private readonly HashSet<int> selectedWebPhotos=[];
     private CancellationTokenSource? inspection;
@@ -34,7 +34,7 @@ internal sealed partial class MainWindow
         var shortcut=Text("Ctrl+Shift+D",12,"Muted");DockPanel.SetDock(shortcut,Dock.Right);
         var caption=new StackPanel();caption.Children.Add(Text("Download a link",15));caption.Children.Add(Text("Video, audio, or an image. Straight into your tools.",12,"Muted"));
         var cardRow=new DockPanel();cardRow.Children.Add(shortcut);cardRow.Children.Add(arrow);cardRow.Children.Add(caption);
-        var cardButton=new Button{Content=cardRow,HorizontalAlignment=HorizontalAlignment.Stretch,HorizontalContentAlignment=HorizontalAlignment.Stretch,Padding=new(22,16,22,16),Margin=new(0,0,0,6)};cardButton.Click+=(_,_)=>OpenDownload();
+        var cardButton=new Button{Content=cardRow,HorizontalAlignment=HorizontalAlignment.Stretch,HorizontalContentAlignment=HorizontalAlignment.Stretch,Padding=new(22,16,22,16),Margin=new(0,0,0,6)};cardButton.Classes.Add("card");cardButton.Click+=(_,_)=>OpenDownload();
         workArea.Children.Insert(workArea.Children.IndexOf(actions),cardButton);
 
         // Download page.
@@ -44,7 +44,7 @@ internal sealed partial class MainWindow
         var card=new StackPanel();card.Children.Add(Text("Download a link",17));card.Children.Add(Text("Video, audio, or an image. Straight into your tools.",12,"Muted"));
         var save=Primary("Download ↗",async()=>await DownloadAsync());DockPanel.SetDock(save,Dock.Right);DockPanel.SetDock(downloadKind,Dock.Right);downloadKind.Margin=new(8,0,8,0);
         var entry=new DockPanel{Margin=new(0,12,0,0)};entry.Children.Add(save);entry.Children.Add(downloadKind);entry.Children.Add(webLink);card.Children.Add(entry);
-        card.Children.Add(Text("Ctrl+Shift+D  Use a copied link  ·  Public, downloadable media",11,"Muted"));
+        var cardHint=Text("Ctrl+Shift+D  Use a copied link  ·  Public, downloadable media",11,"Muted");cardHint.Margin=new(4,6,0,0);card.Children.Add(cardHint);
         var webCard=Card(card);webCard.Margin=new(0,20,0,0);webContent.Children.Add(webCard);BuildWebOptions();
         var scroll=new ScrollViewer{Content=webContent,IsVisible=false,VerticalScrollBarVisibility=Avalonia.Controls.Primitives.ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled};
         AddPage("web",scroll);
@@ -59,19 +59,19 @@ internal sealed partial class MainWindow
 
     private void BuildWebOptions()
     {
-        var buttons=new WrapPanel();buttons.Children.Add(Button("Find media",async()=>await InspectWebLinkAsync()));
+        var buttons=new WrapPanel{Margin=new(-4,10,0,0)};buttons.Children.Add(Button("Find media",async()=>await InspectWebLinkAsync()));
         buttons.Children.Add(Button("Paste link",async()=>{try{if(Services.Clipboard is not null){var read=await Services.Clipboard.ReadAsync(this);webLink.Text=read.Url??read.Text?.Trim()??"";}}catch(Exception e)when(ClipboardImport.IsClipboardError(e)){L10n.SetText(webSummary,"Clipboard is busy. Try Paste again.");}}));
         webContent.Children.Add(buttons);webContent.Children.Add(webSummary);
-        var quality=new StackPanel();quality.Children.Add(Text("Video quality",12,"Muted"));L10n.Choices(webQuality);quality.Children.Add(webQuality);webQualityPanel=quality;webContent.Children.Add(quality);
+        var quality=new StackPanel();quality.Children.Add(Text("Video quality",12,"Muted"));L10n.Choices(webQuality);webQuality.Margin=new(0,4,4,4);quality.Children.Add(webQuality);webQualityPanel=quality;webContent.Children.Add(quality);
         downloadKind.SelectionChanged+=(_,_)=>quality.IsVisible=downloadKind.SelectedItem as string=="video";webContent.Children.Add(photoChoices);
-        var destination=new DockPanel{Margin=new(0,14,0,4)};webLocation=Text(preferences.Value.DownloadFolder,12,"Muted",false);
+        var destination=new DockPanel{Margin=new(0,6,0,0)};webLocation=Text(preferences.Value.DownloadFolder,12,"Muted",false);
         var change=Button("Change…",async()=>
         {
             if(Services.Files is null)return;var folder=await Services.Files.OpenFolderAsync(this,L10n.Text("Save downloaded media to…"),preferences.Value.DownloadFolder);
             if(folder is null)return;preferences.Save(preferences.Value with{DownloadFolder=folder});webLocation.Text=folder;
         });
-        DockPanel.SetDock(change,Dock.Right);destination.Children.Add(change);destination.Children.Add(webLocation);webContent.Children.Add(Card(destination));
-        webContent.Children.Add(Text("Instagram photo posts open a photo selection. Reel links offer video and audio. Public downloadable media only.",11,"Muted"));
+        DockPanel.SetDock(change,Dock.Right);destination.Children.Add(change);destination.Children.Add(webLocation);var destinationCard=Card(destination);destinationCard.Padding=new(20,8,12,8);webContent.Children.Add(destinationCard);
+        var note=Text("Instagram photo posts open a photo selection. Reel links offer video and audio. Public downloadable media only.",11,"Muted");note.Margin=new(4,8,4,16);webContent.Children.Add(note);
         webLink.TextChanged+=(_,_)=>
         {
             inspection?.Cancel();inspectedLink=null;photoChoices.Children.Clear();selectedWebPhotos.Clear();

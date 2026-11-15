@@ -6,6 +6,11 @@ Comment=Convert images, audio, video and documents
 Exec=nashi %F
 Icon=nashi
 Terminal=false
+Actions=wheel;
 Categories=Utility;Graphics;AudioVideo;
 StartupWMClass=Nashi
 MimeType=application/epub+zip;application/gzip;application/pdf;application/rtf;application/vnd.apple.pages;application/vnd.ms-excel;application/vnd.ms-powerpoint;application/vnd.oasis.opendocument.spreadsheet;application/vnd.openxmlformats-officedocument.presentationml.presentation;application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;application/vnd.openxmlformats-officedocument.wordprocessingml.document;application/vnd.rar;application/x-subrip;application/x-tar;application/zip;audio/flac;audio/mp4;audio/mpeg;audio/ogg;audio/x-aiff;audio/x-ms-wma;audio/x-wav;image/avif;image/bmp;image/gif;image/heic;image/jpeg;image/png;image/svg+xml;image/tiff;image/webp;text/csv;text/html;text/markdown;text/plain;text/tab-separated-values;text/vtt;video/mp4;video/quicktime;video/webm;video/x-matroska;video/x-ms-wmv;video/x-msvideo;
+
+[Desktop Action wheel]
+Name=Open wheel for copied files
+Exec=nashi --wheel

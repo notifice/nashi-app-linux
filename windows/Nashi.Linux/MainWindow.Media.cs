@@ -26,7 +26,7 @@ internal sealed partial class MainWindow
             }
         }
         finally{SetBusy(false);}
-        var accepted=await ToolEditor.ShowDetailedAsync(this,choice.Id,selected,preferences,title:choice.Title,media:info,frame:frame,tools:tools);
+        var accepted=await ToolEditor.ShowDetailedAsync(DialogOwner,choice.Id,selected,preferences,title:choice.Title,media:info,frame:frame,tools:tools);
         if(accepted is null)return true;
         var inputs=choice.Id is "cropVideo" or "redactVideo"?[selected[0]]:accepted.OrderedInputs is {Length:>0} ordered?ordered:selected;
         var destination=OutputDirectory(inputs);var options=accepted.Media;

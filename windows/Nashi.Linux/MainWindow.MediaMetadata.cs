@@ -13,7 +13,7 @@ internal sealed partial class MainWindow
         if(selected.Length==1)
         {
             var values=await MediaMetadata.Read(tools,selected[0]);var editor=new MetadataEditor(values,media:true);
-            if(!await editor.ShowDialog<bool>(this))return;removeAll=editor.RemoveAll;updates=removeAll?[]:editor.Updates;
+            if(!await editor.ShowDialog<bool>(DialogOwner))return;removeAll=editor.RemoveAll;updates=removeAll?[]:editor.Updates;
         }
         await RunWithToastAsync("Metadata",(report,token)=>new MediaEngine(tools.Executable("ffmpeg"),tools.Executable("ffprobe")).ToolAsync("removeMetadata",selected,OutputDirectory(selected),new(){RemoveAllMetadata=removeAll,Metadata=updates},report,token));
     }

@@ -29,18 +29,18 @@ internal sealed partial class MainWindow
         if(choice.Id.StartsWith("convert:",StringComparison.Ordinal))
         {
             var format=choice.Id[8..];var title="Convert to "+format.ToUpperInvariant();
-            var accepted=await ToolEditor.ShowDetailedAsync(this,"convert",selected,preferences,format,FeatureCatalog.Formats(selected),title);if(accepted is null)return true;
+            var accepted=await ToolEditor.ShowDetailedAsync(DialogOwner,"convert",selected,preferences,format,FeatureCatalog.Formats(selected),title);if(accepted is null)return true;
             await RunWithToastAsync(title,(report,token)=>ConvertDocumentsAsync(selected,accepted.Format,OutputDirectory(selected),accepted.Document,report,token));return true;
         }
         if(choice.Id=="organizePDF")
         {
-            var organizer=await PdfOrganizer.CreateAsync(selected[0]);if(!await organizer.ShowDialog<bool>(this))return true;
+            var organizer=await PdfOrganizer.CreateAsync(selected[0]);if(!await organizer.ShowDialog<bool>(DialogOwner))return true;
             // Read the organizer on the UI thread; the export runs on a worker thread.
             var pages=organizer.Pages;var rotations=organizer.Rotations;var pageRotations=organizer.PageRotations;var uniformWidth=organizer.UniformWidth;var destination=OutputDirectory(selected);
             await RunWithToastAsync("Organize PDF",(report,token)=>Task.Run(()=>DocumentEngine.Pdf("organizePDF",selected,destination,pages,token,rotations,pageRotations:pageRotations,uniformWidth:uniformWidth),token));return true;
         }
         if(choice.Id is not ("mergePDFs" or "splitPDF" or "compress"))return false;
-        var result=await ToolEditor.ShowDetailedAsync(this,choice.Id,selected,title:choice.Title);if(result is null)return true;
+        var result=await ToolEditor.ShowDetailedAsync(DialogOwner,choice.Id,selected,title:choice.Title);if(result is null)return true;
         var password=result.Document.Password;var ordered=result.OrderedInputs;var outDirectory=OutputDirectory(selected);
         if(choice.Id=="compress"){await RunWithToastAsync("Compress PDF",(report,token)=>PdfCompression.RunAsync(selected,outDirectory,result.Image,password,report,token,Services.Pdf!));return true;}
         var split=result.Split;
@@ -52,8 +52,8 @@ internal sealed partial class MainWindow
         if(selected.All(p=>FeatureCatalog.IsAudio(p)||FeatureCatalog.IsVideo(p)&&FeatureCatalog.Extension(p)!="gif")){await EditMediaMetadataAsync(selected);return;}
         if(metadataService.Executable is null)
         {
-            if(Services.Dialogs is not null&&!await Services.Dialogs.ConfirmAsync(this,L10n.Text("Download ExifTool (~11 MB) from its official SourceForge distribution? The SHA-256 is checked and it runs locally without an administrator password. Upstream licenses are retained."),L10n.Text("Set up metadata tools")))return;
-            SetBusy(true);using var cancellation=new CancellationTokenSource();var toast=new ToastWindow(this,cancellation.Cancel);toast.Show(this);
+            if(Services.Dialogs is not null&&!await Services.Dialogs.ConfirmAsync(DialogOwner,L10n.Text("Download ExifTool (~11 MB) from its official SourceForge distribution? The SHA-256 is checked and it runs locally without an administrator password. Upstream licenses are retained."),L10n.Text("Set up metadata tools")))return;
+            SetBusy(true);using var cancellation=new CancellationTokenSource();var toast=OpenToast(cancellation.Cancel);
             var report=new Progress<OperationProgress>(p=>Dispatcher.UIThread.Post(()=>toast.Update(p)));
             try{await metadataService.InstallAsync(report,cancellation.Token);}
             catch(OperationCanceledException){toast.Close();L10n.SetText(status,"Setup cancelled.");return;}
@@ -65,7 +65,7 @@ internal sealed partial class MainWindow
         {
             IReadOnlyDictionary<string,string> values;
             try{values=await metadataService.ReadAsync(selected[0]);}catch(Exception error){await ShowInfoAsync(error.Message,"Couldn’t read metadata");return;}
-            var editor=new MetadataEditor(values);if(!await editor.ShowDialog<bool>(this))return;removeAll=editor.RemoveAll;changes=removeAll?null:editor.Updates;
+            var editor=new MetadataEditor(values);if(!await editor.ShowDialog<bool>(DialogOwner))return;removeAll=editor.RemoveAll;changes=removeAll?null:editor.Updates;
         }
         await RunWithToastAsync("Metadata",(report,token)=>metadataService.WriteAsync(selected,OutputDirectory(selected),removeAll,changes,progress:report,token:token));
     }
@@ -95,6 +95,6 @@ internal sealed partial class MainWindow
             if(Uri.TryCreate(result.Value,UriKind.Absolute,out var url)&&url.Scheme is "http" or "https")buttons.Children.Add(Button("Open link",()=>Services.Shell.OpenUrl(url.AbsoluteUri)));
             content.Children.Add(buttons);stack.Children.Add(Card(content));
         }
-        window.Content=new ScrollViewer{Content=stack};await window.ShowDialog(this);
+        window.Content=new ScrollViewer{Content=stack};await window.ShowDialog(DialogOwner);
     }
 }

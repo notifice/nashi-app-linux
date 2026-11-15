@@ -12,15 +12,17 @@ public sealed class ToastWindow:Window
     private readonly TextBlock detail=new(){Margin=new(0,4,0,8),TextWrapping=TextWrapping.Wrap};
     private readonly ProgressBar bar=new(){Height=5,Minimum=0,Maximum=1,IsIndeterminate=true};
     private readonly Button action=new(){Content="Cancel",MinWidth=85};private readonly Action? cancel;private bool complete;
-    public ToastWindow(Window owner,Action? cancel)
+    /// Sits at the bottom of <paramref name="owner"/>; without one (Nashi hidden, wheel shortcut) it is centred on <paramref name="spot"/>, else on the primary screen.
+    internal ToastWindow(Window? owner,Action? cancel,Platform.Linux.ScreenSpot? spot=null)
     {
         Nashi.Linux.Theme.Attach(this);Nashi.Linux.Theme.Res(bar,Avalonia.Controls.Primitives.TemplatedControl.ForegroundProperty,"Gold");Nashi.Linux.Theme.Res(bar,Avalonia.Controls.Primitives.TemplatedControl.BackgroundProperty,"Inset");this.cancel=cancel;L10n.Content(action);
-        WindowDecorations=WindowDecorations.None;CanResize=false;TransparencyLevelHint=[WindowTransparencyLevel.Transparent];Background=Brushes.Transparent;ShowInTaskbar=false;ShowActivated=false;Topmost=true;SizeToContent=SizeToContent.Height;Width=510;WindowStartupLocation=WindowStartupLocation.Manual;
+        WindowDecorations=WindowDecorations.None;CanResize=false;TransparencyLevelHint=[WindowTransparencyLevel.Transparent];Background=Brushes.Transparent;Title="Nashi";ShowInTaskbar=false;ShowActivated=false;Topmost=true;SizeToContent=SizeToContent.Height;Width=510;WindowStartupLocation=WindowStartupLocation.Manual;
         var content=new StackPanel();content.Children.Add(label);content.Children.Add(detail);content.Children.Add(bar);
         var grid=new Grid();grid.ColumnDefinitions.Add(new(1,GridUnitType.Star));grid.ColumnDefinitions.Add(new(GridLength.Auto));grid.Children.Add(content);Grid.SetColumn(action,1);grid.Children.Add(action);action.Margin=new(18,0,0,0);action.VerticalAlignment=VerticalAlignment.Center;
         var card=new Border{CornerRadius=new(22),BorderThickness=new(1),Padding=new(24),Child=grid};Nashi.Linux.Theme.Res(card,Border.BackgroundProperty,"Surface");Nashi.Linux.Theme.Res(card,Border.BorderBrushProperty,"Line");Content=card;
         Opened+=(_,_)=>
         {
+            if(owner is null){Position=(spot??Platform.Linux.PointerLocation.Spot(null,Screens.All,Screens.Primary)).Place(new(Width,Bounds.Height));return;}
             var scale=owner.DesktopScaling;var x=owner.Position.X+(int)((owner.Bounds.Width-Width)/2*scale);var y=owner.Position.Y+(int)((owner.Bounds.Height-Bounds.Height-30)*scale);
             Position=new(Math.Max(8,x),Math.Max(8,y));
         };
@@ -32,6 +34,13 @@ public sealed class ToastWindow:Window
         complete=true;L10n.SetText(label,outputs.Count==0?"All set. You’re ready to go.":$"Nicely done. {outputs.Count} {(outputs.Count==1?"file is":"files are")} ready.");detail.Text=outputs.Count>0?Path.GetFileName(outputs[0]):"Ready.";bar.IsVisible=false;L10n.Bind(action,ContentControl.ContentProperty,"Show in Explorer");action.IsEnabled=true;
         // Replace the cancel handler by disabling its callback after completion.
         action.Click+=(_,_)=>{if(outputs.Count>0&&(File.Exists(outputs[0])||Directory.Exists(outputs[0])))Services.Shell?.Reveal(outputs[0]);};
-        var timer=new DispatcherTimer{Interval=TimeSpan.FromSeconds(3)};timer.Tick+=(_,_)=>{timer.Stop();if(Nashi.Linux.Theme.Animations&&Services.Screen?.ReducedMotion!=true){Transitions=[new DoubleTransition{Property=OpacityProperty,Duration=TimeSpan.FromMilliseconds(280)}];Opacity=0;DispatcherTimer.RunOnce(Close,TimeSpan.FromMilliseconds(300));}else Close();};timer.Start();
+        FadeAfter(TimeSpan.FromSeconds(3));
+    }
+    /// A message only (no progress, no button) that fades after a few seconds.
+    public void Notice(string message){complete=true;L10n.SetText(label,message);detail.IsVisible=false;bar.IsVisible=false;action.IsVisible=false;FadeAfter(TimeSpan.FromSeconds(5));}
+    internal string MessageForTest=>label.Text??"";
+    private void FadeAfter(TimeSpan delay)
+    {
+        var timer=new DispatcherTimer{Interval=delay};timer.Tick+=(_,_)=>{timer.Stop();if(Nashi.Linux.Theme.Animations&&Services.Screen?.ReducedMotion!=true){Transitions=[new DoubleTransition{Property=OpacityProperty,Duration=TimeSpan.FromMilliseconds(280)}];Opacity=0;DispatcherTimer.RunOnce(Close,TimeSpan.FromMilliseconds(300));}else Close();};timer.Start();
     }
 }

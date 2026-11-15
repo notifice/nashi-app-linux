@@ -34,11 +34,11 @@ internal sealed partial class MainWindow
     partial void InitLibrary()
     {
         homeButton=Button("Home",()=>ShowLibrary(false));libraryButton=Button("Library",()=>ShowLibrary(true));
-        homeButton.Margin=new(0,0,6,0);libraryButton.Margin=new(0,0,12,0);homeButton.FontSize=libraryButton.FontSize=11;
+        homeButton.Padding=libraryButton.Padding=new(10,6);homeButton.FontSize=libraryButton.FontSize=11;
         AddHeaderButton(homeButton);AddHeaderButton(libraryButton);
         L10n.SetTip(homeButton,"Home  ·  Ctrl+1");L10n.SetTip(libraryButton,"Library  ·  Ctrl+2");
 
-        libraryPage.Children.Add(Text("Your Library",30));libraryPage.Children.Add(Text("Freshly made, pasted, and ready for another round.",14,"Muted"));
+        libraryPage.Margin=new(0,0,12,0);libraryPage.Children.Add(Text("Your Library",30));libraryPage.Children.Add(Text("Freshly made, pasted, and ready for another round.",14,"Muted"));
         var searchLabel=Text("Find a file or tool  ·  Ctrl+F",12,"Muted");searchLabel.Margin=new(4,20,4,4);libraryPage.Children.Add(searchLabel);
         L10n.Bind(search,TextBox.PlaceholderTextProperty,"Find a file or tool");search.Margin=new(0,0,0,12);search.HorizontalAlignment=HorizontalAlignment.Stretch;
         libraryPage.Children.Add(search);libraryPage.Children.Add(libraryRows);search.TextChanged+=(_,_)=>RenderLibraryRows();
@@ -63,7 +63,7 @@ internal sealed partial class MainWindow
         if(!busy)L10n.SetText(status,"Files stay on your computer.");
         selectedLibraryId??=LibraryEntries().FirstOrDefault()?.Id;
         ShowPage(visible?"library":"home");
-        Nashi.Linux.Theme.Res(homeButton!,Avalonia.Controls.Primitives.TemplatedControl.BackgroundProperty,visible?"Surface":"Sage");Nashi.Linux.Theme.Res(libraryButton!,Avalonia.Controls.Primitives.TemplatedControl.BackgroundProperty,visible?"Sage":"Surface");
+        homeButton!.Classes.Set("active",!visible);libraryButton!.Classes.Set("active",visible);
         if(visible)RenderLibraryRows();
         if(changed&&IsLoaded)Nashi.Linux.Theme.Entrance(visible?libraryPage:home);
     }

@@ -42,6 +42,14 @@ X11 client libraries (libX11, libXcursor, libXrandr, libXi, libICE, libSM, fontc
 - Launch at login writes `$XDG_CONFIG_HOME/autostart/nashi.desktop` (default `~/.config/autostart`).
 - Terminal action tries `xdg-terminal-exec`, konsole, gnome-terminal, kitty, alacritty, foot, xterm.
 
+## Global shortcut
+
+Copy files in your file manager (Ctrl+C), then press a shortcut to open the Nashi wheel for them. Wayland apps cannot register global hotkeys, so bind one yourself: System Settings → Keyboard → Shortcuts → Add New → Command `nashi --wheel` (use the full path of the executable if `nashi` is not on the session PATH; Settings → Shortcut shows it and can copy the command). The packaged `.desktop` file also offers an "Open wheel for copied files" action.
+
+The copied files are read with `wl-paste` in the launching process (XWayland cannot see the Wayland clipboard while Nashi is unfocused), so the `wl-clipboard` package is needed (`sudo apt install wl-clipboard` / `sudo pacman -S wl-clipboard`). Without it, or on X11, no copied files arrive and Nashi shows a short hint instead of the wheel.
+
+The wheel opens centred on the mouse pointer and Nashi's own window stays hidden (also when the shortcut starts Nashi). Under XWayland the pointer is invisible to X11 apps while it is over Wayland windows, so on KDE Plasma Nashi asks KWin through a one-shot KWin script over D-Bus; elsewhere the wheel opens in the middle of the primary screen. Editors then open centred on that screen and progress shows in a toast at the pointer. Without a tray icon, a Nashi started hidden by the shortcut quits once its windows close.
+
 ## Differences from Windows
 
 See the Linux column in [FEATURE-PARITY.md](../FEATURE-PARITY.md). Not available on Linux: the global drag wheel and window-management wheel, Share, face detection, `.lnk` shortcuts, and the frame, collage, redact and annotate image tools (shown as "isn't available on Linux yet").

@@ -16,15 +16,15 @@ internal sealed partial class MainWindow
         {
             switch(action)
             {
-                case "copy":await FileActions.Copy(this,paths);L10n.SetText(status,"Files copied. Paste them wherever you need.");break;
-                case "copyPath":await FileActions.CopyPaths(this,paths);L10n.SetText(status,"File paths copied.");break;
+                case "copy":await FileActions.Copy(DialogOwner,paths);L10n.SetText(status,"Files copied. Paste them wherever you need.");break;
+                case "copyPath":await FileActions.CopyPaths(DialogOwner,paths);L10n.SetText(status,"File paths copied.");break;
                 case "terminal":FileActions.Terminal(paths[0]);break;
                 case "float":
                     if(preferences.Value.FloatBehavior=="addToExisting"&&shelves.LastOrDefault(s=>s.IsVisible) is {} existing){existing.Add(paths);existing.Activate();break;}
                     var shelf=new FloatShelf(paths,(p,a)=>PerformFileAction(a,p),p=>{files.Clear();Add(p);ShowLibrary(false);Activate();});
                     shelves.Add(shelf);shelf.Closed+=(_,_)=>shelves.Remove(shelf);shelf.Show();break;
                 case "move":
-                    var folder=await Services.Files.OpenFolderAsync(this,L10n.Text("Choose where to move the files"),Path.GetDirectoryName(Path.GetFullPath(paths[0])));
+                    var folder=await Services.Files.OpenFolderAsync(DialogOwner,L10n.Text("Choose where to move the files"),Path.GetDirectoryName(Path.GetFullPath(paths[0])));
                     if(folder is null)break;
                     await RunWithToastAsync("Move",(report,token)=>FileActions.MoveAsync(paths,folder,report,token));
                     foreach(var gone in files.Where(p=>!File.Exists(p)&&!Directory.Exists(p)).ToArray())files.Remove(gone);

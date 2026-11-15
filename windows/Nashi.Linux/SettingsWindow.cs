@@ -15,7 +15,7 @@ internal sealed partial class SettingsWindow:Window
     private readonly LibraryStore appearanceStore;
     private readonly PreferencesStore store;private readonly Action changed;private readonly Func<Task>? update;
     private readonly StackPanel page=new(){Margin=new(28),MaxWidth=560,HorizontalAlignment=HorizontalAlignment.Left};
-    private readonly ListBox sections=new(){Width=175,Margin=new(8),ItemsSource=new[]{"General","Formats","Compatibility","Folders","Updates","About"},SelectedIndex=0};
+    private readonly ListBox sections=new(){Width=175,Margin=new(8),ItemsSource=new[]{"General","Formats","Compatibility","Folders","Shortcut","Updates","About"},SelectedIndex=0};
     internal string Section{get=>(string)sections.SelectedItem!;set=>sections.SelectedItem=value;}
     public SettingsWindow(PreferencesStore store,Action changed,Func<Task>? update,LibraryStore appearanceStore)
     {
@@ -78,6 +78,13 @@ internal sealed partial class SettingsWindow:Window
                 Pick("Save new copies",["beside","ask","folder"],store.Value.OutputMode,v=>Save(store.Value with{OutputMode=v}));
                 page.Children.Add(Ui.Button("Choose output folder…",async()=>await ChooseFolderAsync("Save new copies here",f=>store.Value with{OutputFolder=f,OutputMode="folder"})));page.Children.Add(new TextBlock{Text=store.Value.OutputFolder,TextWrapping=Avalonia.Media.TextWrapping.Wrap});
                 page.Children.Add(Ui.Button("Choose downloads folder…",async()=>await ChooseFolderAsync("Save downloaded media here",f=>store.Value with{DownloadFolder=f})));page.Children.Add(new TextBlock{Text=store.Value.DownloadFolder,TextWrapping=Avalonia.Media.TextWrapping.Wrap});
+                break;
+            case "Shortcut":
+                Heading("Global shortcut","Copy files in your file manager, then press a shortcut to open the wheel.");
+                var command="\""+(Environment.ProcessPath??"nashi")+"\" --wheel";
+                page.Children.Add(Ui.Text("Set it in System Settings → Keyboard → Shortcuts → Add New → Command:",13));
+                page.Children.Add(new SelectableTextBlock{Text=command,TextWrapping=Avalonia.Media.TextWrapping.Wrap,Margin=new(4,8,4,8)});
+                page.Children.Add(Ui.Button("Copy command",async()=>{try{if(Services.Clipboard is not null)await Services.Clipboard.SetTextAsync(this,command);}catch(Exception error)when(error is InvalidOperationException or IOException){Fail(error.Message,"Copy command");}}));
                 break;
             case "Updates":
                 Heading("Fresh things, on their way.",Services.Updates is {SelfUpdateSupported:false}?"Nashi checks the public release page for a newer version and offers to open it. Nothing is downloaded or installed for you.":"Updates are downloaded from the public Nashi repository and verified before installation. No GitHub account or token is required.");

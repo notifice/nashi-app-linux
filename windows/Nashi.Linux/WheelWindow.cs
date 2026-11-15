@@ -28,15 +28,20 @@ public sealed class WheelWindow:Window
     internal int SelectedIndex=>selected;
     /// Opens the wheel for the files in the given mode and returns the picked choice, or null when it was dismissed or has nothing to offer.
     /// Ids are the ones Nashi.Windows uses: "convert:jpg", "convert", a tool id such as "compress", or a file action such as "share".
-    public static Task<ToolChoice?> ShowAsync(Window? owner,IReadOnlyList<string> files,WheelMode mode)
+    /// With <paramref name="at"/> (the global shortcut) the wheel is centred there, on top, instead of on its owner.
+    internal static Task<ToolChoice?> ShowAsync(Window? owner,IReadOnlyList<string> files,WheelMode mode,Platform.Linux.ScreenSpot? at=null)
     {
         var initial=mode.Id();var first=WheelPresentation.Choices(files,initial);
         if(first.Count==0)return Task.FromResult<ToolChoice?>(null);
-        return new WheelWindow(owner,first,modes:m=>WheelPresentation.Choices(files,m),initialMode:initial).ShowAsync();
+        var wheel=new WheelWindow(owner,first,modes:m=>WheelPresentation.Choices(files,m),initialMode:initial);if(at is {} spot)wheel.PlaceAt(spot);
+        return wheel.ShowAsync();
     }
+    internal void PlaceAt(Platform.Linux.ScreenSpot spot){WindowStartupLocation=WindowStartupLocation.Manual;Topmost=true;Position=spot.Place(new(Width,Height));}
     /// Shows this wheel; completes with the choice, or null on Escape, clicking the centre or losing focus.
+    internal static WheelWindow? Current{get;private set;}
     public Task<ToolChoice?> ShowAsync()
     {
+        Current=this;_=done.Task.ContinueWith(_=>{if(Current==this)Current=null;});
         if(ownerWindow is not null)Show(ownerWindow);else Show();
         return done.Task;
     }

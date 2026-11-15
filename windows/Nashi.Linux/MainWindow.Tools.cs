@@ -16,9 +16,10 @@ internal sealed partial class MainWindow
     private async void ShowWheel(){try{await ShowWheelAsync();}catch(Exception error){await ShowInfoAsync(error.Message,"Couldn’t open this tool");}}
     internal async Task<ToolChoice?> ShowWheelAsync(WheelMode? mode=null)
     {
-        if(busy||files.Count==0)return null;
+        if(busy)return null;
+        if(files.Count==0){L10n.SetText(status,"Add files first: drop them here, press Ctrl+O, or copy them and press the Nashi shortcut.");return null;}
         var initial=mode??new[]{WheelMode.Tools,WheelMode.Convert,WheelMode.Actions}.FirstOrDefault(m=>WheelPresentation.Choices(files,m.Id()).Count>0);
-        var choice=await WheelWindow.ShowAsync(this,files.ToArray(),initial);
+        var choice=await WheelWindow.ShowAsync(wheelSpot is null||Shown?this:null,files.ToArray(),initial,wheelSpot);
         if(choice is not null)await RunToolAsync(choice);
         return choice;
     }
@@ -37,7 +38,7 @@ internal sealed partial class MainWindow
             var id=choice.Id switch{"cropImage"=>"crop","annotateImage"=>"annotate","mergePDF"=>"mergePDFs",_=>choice.Id};
             if(!Images||!ImageToolIds.Contains(id)){await ShowUnavailableAsync(choice.Title);return;}
             var selected=files.ToArray();ToolEditorResult? accepted;
-            try{accepted=await ToolEditor.ShowDetailedAsync(this,id,selected,preferences,title:choice.Title);}
+            try{accepted=await ToolEditor.ShowDetailedAsync(DialogOwner,id,selected,preferences,title:choice.Title);}
             catch(NotSupportedException){await ShowUnavailableAsync(choice.Title);return;}
             if(accepted is null)return;
             var inputs=accepted.OrderedInputs is {Length:>0} ordered?ordered:selected;var destination=OutputDirectory(inputs);

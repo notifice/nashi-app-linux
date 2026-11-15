@@ -18,7 +18,9 @@ internal sealed partial class MainWindow
     partial void InitSettings()
     {
         toolsSetupButton=Button("Finish setup",()=>ShowToolSetup());settingsButton=Button("Settings",()=>ShowSettings());
-        foreach(var button in new[]{toolsSetupButton,settingsButton}){button.Margin=new(0,0,8,0);button.FontSize=11;AddHeaderButton(button);}
+        // Windows order: Finish setup, Home, Library, "On your PC", Settings.
+        foreach(var button in new[]{toolsSetupButton,settingsButton}){button.Padding=new(10,6);button.FontSize=11;}
+        headerControls.Children.Insert(0,toolsSetupButton);headerButtonCount++;headerControls.Children.Add(settingsButton);
         L10n.SetTip(settingsButton,"Settings  ·  Ctrl+,");UpdateToolsSetupLabel();
         AddHandler(KeyDownEvent,(object? _,KeyEventArgs e)=>{if(!busy&&e.KeyModifiers==KeyModifiers.Control&&e.Key==Key.OemComma){ShowSettings();e.Handled=true;}},RoutingStrategies.Tunnel);
         ApplyPreferences();
@@ -38,7 +40,7 @@ internal sealed partial class MainWindow
         {
             // The Updates section offers a manual release check; Linux has no self-update.
             settingsWindow=new(preferences,ApplyPreferences,CheckUpdatesNowAsync,library);
-            settingsWindow.Closed+=(_,_)=>{settingsWindow=null;appearance.SelectedItem=char.ToUpper(library.Appearance[0])+library.Appearance[1..];};
+            settingsWindow.Closed+=(_,_)=>{settingsWindow=null;};
             settingsWindow.Show(this);
         }
         settingsWindow.Activate();return settingsWindow;
