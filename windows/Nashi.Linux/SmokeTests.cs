@@ -30,7 +30,8 @@ internal static partial class SmokeTests
 
     internal static int Run(string directory)
     {
-        Directory.CreateDirectory(directory);
+        // CI passes a relative directory; file URIs, launch forwarding and autostart need absolute paths.
+        directory=Path.GetFullPath(directory);Directory.CreateDirectory(directory);
         var results=new List<(string Name,bool Ok,string? Detail)>();
         Program.BuildAvaloniaApp().Start((app,_args)=>
         {

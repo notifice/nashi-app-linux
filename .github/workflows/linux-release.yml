@@ -1,0 +1,81 @@
+name: Linux release
+# Builds, checks and publishes a Linux release of this fork.
+# Run it from the Actions tab ("Run workflow", enter a version such as 0.7.17.1) or push a tag v0.7.17.1.
+# Install the latest release with scripts/install-linux.sh (see README "Linux in this fork").
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version, four numbers (e.g. 0.7.17.1). Must be higher than the last release for the in-app update notice.'
+        required: true
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+concurrency:
+  group: linux-release
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1
+        with:
+          dotnet-version: '10.0.x'
+      - name: Resolve version
+        id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+          REF_NAME: ${{ github.ref_name }}
+          REF_TYPE: ${{ github.ref_type }}
+        run: |
+          if [ "$REF_TYPE" = tag ]; then version="${REF_NAME#v}"; else version="$INPUT_VERSION"; fi
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?$ ]] || { echo "::error::Version must look like 0.7.17.1, got '$version'"; exit 1; }
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Restore and build
+        run: |
+          dotnet restore windows/Nashi.Engine --locked-mode
+          dotnet restore windows/Nashi.Linux --locked-mode
+          dotnet restore windows/Nashi.Linux.Verify --locked-mode
+          dotnet build windows/Nashi.Linux.Verify -c Release --no-restore
+          dotnet build windows/Nashi.Linux -c Release --no-restore
+      - name: Engine checks
+        run: dotnet run --project windows/Nashi.Linux.Verify -c Release --no-build
+      - name: Install a virtual display and runtime dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb tesseract-ocr tesseract-ocr-eng libice6 libsm6 libfontconfig1 libx11-6 libxcursor1 libxrandr2 libxi6
+      - name: Desktop smoke test under Xvfb
+        env:
+          NASHI_SMOKE_DIRECTORY: build/linux-smoke
+        run: xvfb-run -a dotnet run --project windows/Nashi.Linux -c Release --no-build -- --smoke-test
+      - name: Package tar.gz and AppImage
+        env:
+          NASHI_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          bash scripts/package-linux.sh --appimage
+          (cd build && sha256sum Nashi-Linux-x86_64.AppImage > Nashi-Linux-x86_64.AppImage.sha256)
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+          SHA: ${{ github.sha }}
+        run: |
+          tag="v$VERSION"
+          cat > build/notes.md <<EOF
+          Nashi for Linux x64 $VERSION (commit ${SHA:0:7}).
+
+          Install or update:
+
+              curl -fsSL https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/main/scripts/install-linux.sh | bash
+
+          Or download Nashi-Linux-x64.tar.gz, extract it and run Nashi/install.sh. The AppImage runs without installing.
+          EOF
+          gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$SHA" --title "Nashi for Linux $VERSION" --notes-file build/notes.md \
+            build/Nashi-Linux-x64.tar.gz build/Nashi-Linux-x64.tar.gz.sha256 \
+            build/Nashi-Linux-x86_64.AppImage build/Nashi-Linux-x86_64.AppImage.sha256

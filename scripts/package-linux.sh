@@ -32,7 +32,13 @@ python3 "$PKG/gen-mimetypes.py" --check
 rm -rf "$BUILD/linux"
 mkdir -p "$BUILD/linux"
 dotnet restore "$PROJECT" --locked-mode
-dotnet publish "$PROJECT" -c Release --no-restore -o "$PUBLISH"
+# NASHI_VERSION (e.g. 0.7.17.1, set by the release workflow) stamps the assembly version the update check compares against.
+VERSION_ARGS=()
+if [ -n "${NASHI_VERSION:-}" ]; then
+  [[ "$NASHI_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?$ ]] || { echo "NASHI_VERSION must look like 0.7.17.1" >&2; exit 2; }
+  VERSION_ARGS=(-p:Version="$NASHI_VERSION")
+fi
+dotnet publish "$PROJECT" -c Release --no-restore -o "$PUBLISH" "${VERSION_ARGS[@]}"
 
 # Packaging files shipped inside the tarball (icons: 256 pre-sized, 1024 source for install.sh resizing).
 cp "$PKG/install.sh" "$PKG/nashi.desktop" "$PKG/nashi-256.png" "$PUBLISH/"

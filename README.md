@@ -59,13 +59,22 @@ For Linux (x64, .NET 10 SDK): `dotnet build windows/Nashi.Linux -c Release`, the
 
 ## Linux in this fork
 
-Install (x64, needs the .NET 10 SDK to build):
+Install or update from the latest release (x86_64, per user, no root):
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/notifice/nashi-app-linux/main/scripts/install-linux.sh | bash
+```
+
+It downloads `Nashi-Linux-x64.tar.gz` from [Releases](https://github.com/notifice/nashi-app-linux/releases), checks its SHA-256 and installs to `~/.local/opt/nashi` with a `nashi` command, launcher and file associations. Remove it with the same command plus `-s -- --uninstall` after `bash`, or `~/.local/opt/nashi/install.sh --uninstall`. The release also has an AppImage that runs without installing.
+
+Make a new release: Actions → **Linux release** → Run workflow, enter a version such as `0.7.17.1` (higher than the last one, so installed copies show the update notice). It builds, runs the engine and UI checks, packages and publishes the release.
+
+Build from source instead (.NET 10 SDK):
 
 ```sh
 dotnet build windows/Nashi.Linux -c Release
 scripts/package-linux.sh            # build/Nashi-Linux-x64.tar.gz (+ .sha256); add --appimage for an AppImage
-tar -xzf build/Nashi-Linux-x64.tar.gz && Nashi/install.sh   # installs to ~/.local/opt/nashi, adds ~/.local/bin/nashi, launcher and file associations
-# Nashi/install.sh --uninstall removes it again
+tar -xzf build/Nashi-Linux-x64.tar.gz && Nashi/install.sh   # Nashi/install.sh --uninstall removes it again
 ```
 
 Differences from the Windows app:
