@@ -21,7 +21,7 @@ internal static class WheelPresentation
     internal static IReadOnlyList<ToolChoice> Choices(IReadOnlyList<string> files,string mode)
     {
         if(files.Count==0)return [];
-        if(mode=="actions")return [new("share","Share","◉"),new("float","Float","▣"),new("copy","Copy","▱"),new("move","Move","↗"),new("copyPath","Copy Path","↪"),new("terminal","Terminal",">_")];
+        if(mode=="actions")return [new("float","Float","▣"),new("copy","Copy","▱"),new("move","Move","↗"),new("copyPath","Copy Path","↪"),new("terminal","Terminal",">_")];
         if(mode=="convert")return FeatureCatalog.Formats(files).Select(format=>new ToolChoice("convert:"+format,format.ToUpperInvariant(),"↗")).ToArray();
         var tools=FeatureCatalog.Tools(files).Select(id=>new ToolChoice(id switch{"cropImage"=>"crop","annotateImage"=>"annotate","mergePDF"=>"mergePDFs",_=>id},FeatureCatalog.ToolNames[id],ToolSymbol(id))).ToList();
         if(FeatureCatalog.Formats(files).Length>0)tools.Insert(0,new("convert","Convert","⇄"));return tools;

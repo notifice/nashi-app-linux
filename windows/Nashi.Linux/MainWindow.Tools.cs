@@ -9,7 +9,7 @@ namespace Nashi.Linux;
 // Image tools run ToolEditor then ImageEngine.Apply; anything whose editor or engine is not ported yet says so instead of failing.
 internal sealed partial class MainWindow
 {
-    private static readonly string[] FileActionIds=["share","float","copy","move","copyPath","terminal"];
+    private static readonly string[] FileActionIds=["float","copy","move","copyPath","terminal"];
     private static readonly string[] ImageToolIds=["resize","crop","rotate","flip","editImage","compress","createPDF"];
     partial void InitTools()=>Refresh();
     /// The wheel opens on the first mode that has something for the selection (Tools, then Convert, then File actions); Ctrl, Shift and Alt switch modes as set in Settings.
@@ -32,7 +32,7 @@ internal sealed partial class MainWindow
             if(choice.Id=="convert"){await ShowWheelAsync(WheelMode.Convert);return;}
             if(await RunDocumentRouteAsync(choice))return;
             if(choice.Id.StartsWith("convert:",StringComparison.Ordinal)){await ConvertWithToastAsync(choice.Id[8..]);return;}
-            if(FileActionIds.Contains(choice.Id)){await ShowUnavailableAsync(choice.Title);return;}
+            if(FileActionIds.Contains(choice.Id)){await PerformFileAction(choice.Id,files.ToArray());return;}
             var id=choice.Id switch{"cropImage"=>"crop","annotateImage"=>"annotate","mergePDF"=>"mergePDFs",_=>choice.Id};
             if(!Images||!ImageToolIds.Contains(id)){await ShowUnavailableAsync(choice.Title);return;}
             var selected=files.ToArray();ToolEditorResult? accepted;

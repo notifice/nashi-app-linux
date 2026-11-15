@@ -131,15 +131,25 @@ internal sealed partial class MainWindow
 
     private void ConfigureLibraryRow(Border card,LibraryEntry entry)
     {
+        PointerPressedEventArgs? pressed=null;var origin=new Point();
         libraryCards[entry.Id]=card;card.Tag=entry;card.Focusable=true;L10n.SetTip(card,"Enter: use in Nashi");
         card.BorderBrush=selectedLibraryId==entry.Id?Nashi.Linux.Theme.Brush("Gold"):Nashi.Linux.Theme.Brush("Line");
         card.GotFocus+=(_,_)=>SelectCard(entry.Id);
         card.PointerPressed+=(_,e)=>
         {
             SelectCard(entry.Id);
-            if(e.Source is Visual source&&source.FindAncestorOfType<Avalonia.Controls.Button>(true) is null){card.Focus();if(e.ClickCount==2)OpenEntry(entry);}
+            if(e.Source is Visual source&&source.FindAncestorOfType<Avalonia.Controls.Button>(true) is null){card.Focus();if(e.ClickCount==2)OpenEntry(entry);pressed=e;origin=e.GetPosition(card);}else pressed=null;
         };
-        // Drag-out of rows is deferred to the platform drag task.
+        // Dragging a row out hands its files to other apps; Avalonia needs the original press event to start the drag.
+        card.PointerReleased+=(_,_)=>pressed=null;
+        card.PointerMoved+=async(_,e)=>
+        {
+            if(pressed is null||Services.Drag is null||!e.GetCurrentPoint(card).Properties.IsLeftButtonPressed)return;
+            var delta=e.GetPosition(card)-origin;if(Math.Abs(delta.X)<6&&Math.Abs(delta.Y)<6)return;
+            var trigger=pressed;pressed=null;var existing=entry.AvailablePaths;if(existing.Length==0)return;
+            try{await Services.Drag.StartFilesAsync(this,trigger,existing);}
+            catch(Exception error)when(error is IOException or UnauthorizedAccessException or InvalidOperationException){L10n.SetText(status,"Couldn’t start the drag: "+error.Message);}
+        };
     }
     // Space preview: one window per request, closed with Space or Escape.
     internal FilePreviewWindow PreviewFiles(IEnumerable<string> paths){var preview=new FilePreviewWindow(paths,tools);preview.Show(this);return preview;}

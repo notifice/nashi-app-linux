@@ -29,7 +29,8 @@ internal static partial class Services
     static partial void InitSound();      // P2-D: Sound
     static partial void InitEngine();     // P2-B/P2-C: Pdf, Ocr, Office
     static partial void InitMedia();      // P3-A: MediaPlayer
-    static partial void InitDesktop();    // P3-D/P3-F: Drag, Tray
+    static partial void InitDrag();       // P3-D: Drag
+    static partial void InitDesktop();    // P3-F: Tray
     static partial void InitUpdates();    // P4-D: Updates
-    internal static void Initialize(){InitBasics();InitClipboard();InitSettings();InitSound();InitEngine();InitMedia();InitDesktop();InitUpdates();}
+    internal static void Initialize(){InitBasics();InitClipboard();InitSettings();InitSound();InitEngine();InitMedia();InitDrag();InitDesktop();InitUpdates();}
 }
