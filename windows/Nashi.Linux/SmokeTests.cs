@@ -11,8 +11,13 @@ namespace Nashi.Linux;
 // `Nashi --smoke-test` with NASHI_SMOKE_DIRECTORY set: shows the real window, renders it, checks the services, writes smoke.json.
 internal static partial class SmokeTests
 {
-    // Later tasks register more scenes from their own files.
-    static partial void RunScenes(string directory,List<(string Name,bool Ok,string? Detail)> results);
+    // Later tasks register more scenes from their own files under Smoke/, one hook implementation each.
+    internal delegate Task<(bool Ok,string? Detail)> Scene(MainWindow window,string directory);
+    static partial void HomeScenes(List<(string Name,Scene Run)> scenes);
+    static partial void WheelScenes(List<(string Name,Scene Run)> scenes);
+    static partial void LibraryScenes(List<(string Name,Scene Run)> scenes);
+    static partial void SettingsScenes(List<(string Name,Scene Run)> scenes);
+    static partial void EditorScenes(List<(string Name,Scene Run)> scenes);
 
     internal static int Run(string directory)
     {
@@ -54,7 +59,15 @@ internal static partial class SmokeTests
         catch(Exception ex){results.Add(("render home.png",false,ex.Message));}
         foreach(var (name,value) in new (string,object?)[]{("Files",Services.Files),("Dialogs",Services.Dialogs),("Shell",Services.Shell),("Screen",Services.Screen),("Theme",Services.Theme),("Drop",Services.Drop)})
             results.Add(("Services."+name,value is not null,null));
-        RunScenes(directory,results);
+        var scenes=new List<(string Name,Scene Run)>();
+        HomeScenes(scenes);WheelScenes(scenes);LibraryScenes(scenes);SettingsScenes(scenes);EditorScenes(scenes);
+        if(window is MainWindow main)
+            foreach(var (name,run) in scenes)
+            {
+                try{var (ok,detail)=await run(main,directory);results.Add((name,ok,detail));}
+                catch(Exception ex){results.Add((name,false,ex.GetType().Name+": "+ex.Message));}
+            }
+        else results.Add(("scenes",false,"main window is not MainWindow"));
         window.Close();
     }
 }

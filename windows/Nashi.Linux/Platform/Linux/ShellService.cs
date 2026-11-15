@@ -88,7 +88,8 @@ internal sealed class ShellService:IShellService
             foreach(var a in args)psi.ArgumentList.Add(a);
             using var p=Process.Start(psi);
             if(p is null)return -1;
-            p.StandardOutput.ReadToEnd();
+            // Drain output asynchronously so the timeout still applies when the child hangs.
+            _=p.StandardOutput.ReadToEndAsync();_=p.StandardError.ReadToEndAsync();
             if(!p.WaitForExit(timeoutMs)){try{p.Kill();}catch{}return -1;}
             return p.ExitCode;
         }
