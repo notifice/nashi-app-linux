@@ -27,7 +27,7 @@ internal sealed partial class MainWindow:Window
     private readonly TextBlock status=Text("Files stay on your computer.",12,"Muted");
     private readonly ProgressBar progress=new(){Height=4,Minimum=0,Maximum=1,IsVisible=false,Margin=new(4,8,4,0)};
     private readonly TextBlock fileDescription=Text("Images, videos, documents, and all the little things in between.",12,"Muted");
-    private readonly Toolchain tools=new(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"Nashi","Tools","v1"),Environment.GetEnvironmentVariable("PATH"));
+    private readonly Toolchain tools=Nashi.Linux.Platform.ToolPaths.CreateToolchain();
     private readonly LibraryStore library;
     private readonly PreferencesStore preferences;
     private readonly StackPanel home=new(),workArea=new();

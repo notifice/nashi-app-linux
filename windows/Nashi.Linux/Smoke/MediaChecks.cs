@@ -10,7 +10,7 @@ internal static partial class SmokeTests
 {
     static partial void MediaScenes(List<(string Name,Scene Run)> scenes)
     {
-        var tools=new Toolchain(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"Nashi","Tools","v1"),Environment.GetEnvironmentVariable("PATH"));
+        var tools=Nashi.Linux.Platform.ToolPaths.CreateToolchain();
         string ffmpeg,ffprobe;
         try{ffmpeg=tools.Executable("ffmpeg");ffprobe=tools.Executable("ffprobe");}
         catch(FileNotFoundException){scenes.Add(("media (skipped)",(_,_)=>Task.FromResult<(bool,string?)>((true,"skipped: ffmpeg or ffprobe was not found on PATH"))));return;}
