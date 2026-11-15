@@ -61,13 +61,15 @@ jobs:
         run: xvfb-run -a dotnet run --project windows/Nashi.Linux -c Release --no-build -- --smoke-test
       - name: Package (tar.gz and AppImage)
         run: |
-          if [ -f scripts/package-linux.sh ]; then bash scripts/package-linux.sh; else echo "::warning::scripts/package-linux.sh not present yet; packaging skipped"; fi
+          bash scripts/package-linux.sh --appimage
       - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         if: always()
         with:
           name: linux-preview
           path: |
-            build/*.tar.gz
+            build/Nashi-Linux-x64.tar.gz
+            build/Nashi-Linux-x64.tar.gz.sha256
+            build/Nashi-Linux-x86_64.AppImage
             build/linux-smoke
           retention-days: 7
           if-no-files-found: error
