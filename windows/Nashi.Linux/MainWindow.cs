@@ -183,7 +183,7 @@ internal sealed partial class MainWindow:Window
             var engine=new MediaEngine(tools.Executable("ffmpeg"),tools.Executable("ffprobe"));var options=new MediaOptions{Quality=profile.Quality,AudioBitrate=profile.AudioBitrate,SampleDepth=profile.SampleDepth,GifFrameRate=profile.GifFrameRate,GifWidth=profile.GifWidth,PreserveMetadata=profile.PreserveMetadata,Height=profile.MaxVideoHeight>0?profile.MaxVideoHeight:null};
             return await Task.Run(()=>engine.ConvertAsync(inputs,format,destination,options,report,token),token);
         }
-        throw new NotSupportedException("Document conversion isn’t available on Linux yet.");
+        return await ConvertDocumentsAsync(inputs,format,destination,new DocumentOptions(profile.Dpi,profile.Layout,profile.EpubLayout),report,token);
     }
     /// Runs <paramref name="work"/> with the busy state, progress toast, Library record and status line shared by every tool.
     private async Task RunWithToastAsync(string label,Func<IProgress<OperationProgress>,CancellationToken,Task<IReadOnlyList<string>>> work)

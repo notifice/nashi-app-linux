@@ -13,7 +13,7 @@ using Nashi.Linux.Platform;
 namespace Nashi.Linux;
 
 /// Everything an accepted editor produces. Image tools read Image and Format; media and document tasks fill the rest through their hooks.
-internal sealed record ToolEditorResult(ImageOptions Image,string Format,bool PreserveMetadata,string[] OrderedInputs,MediaOptions Media,DocumentOptions Document,int[] Pages);
+internal sealed record ToolEditorResult(ImageOptions Image,string Format,bool PreserveMetadata,string[] OrderedInputs,MediaOptions Media,DocumentOptions Document,int[] Pages,SplitChoice Split);
 
 // Port of Nashi.Windows/ToolEditor.cs for the image tools (crop, resize, rotate, editImage, compress, convert).
 // Media and document editors add their controls and options through the four partial hooks below, in their own files.
@@ -102,7 +102,7 @@ internal sealed partial class ToolEditor:Window
         if(preferences is not null)editor.ConfigureProfiles(preferences,format);
         else if(format is not null&&editor.format.Items.Contains(format))editor.format.SelectedItem=format;
         Active=editor;
-        try{return await editor.ShowDialog<bool>(owner)?new ToolEditorResult(editor.ImageOptions,editor.Format,editor.PreserveImageMetadata,editor.OrderedInputs,editor.MediaOptions,editor.DocumentOptions,editor.Pages):null;}
+        try{return await editor.ShowDialog<bool>(owner)?new ToolEditorResult(editor.ImageOptions,editor.Format,editor.PreserveImageMetadata,editor.OrderedInputs,editor.MediaOptions,editor.DocumentOptions,editor.Pages,new SplitChoice(editor.PagesPerFile,editor.PageRanges)):null;}
         finally{if(Active==editor)Active=null;}
     }
 
