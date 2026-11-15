@@ -35,8 +35,7 @@ internal sealed partial class MainWindow
         quitting=true;
         if(Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)desktop.Shutdown();else Close();
     }
-    // TODO(InitWeb): once the link download flow exists, ImportClipboardAsync should start it; until then it reports that downloads are unavailable.
-    private void DownloadClipboard(){_=ImportClipboardAsync();}
+    private void DownloadClipboard(){_=OpenCopiedLinkAsync();}
     /// A later launch handed its arguments over: show the window, then open the files or import the clipboard.
     internal void AcceptLaunch(string[] args)
     {

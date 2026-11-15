@@ -113,7 +113,7 @@ internal sealed partial class MainWindow:Window
         {
             var content=await read;
             if(content.Files.Count>0)AddFiles(content.Files);
-            else if(content.Url is not null)L10n.SetText(status,"Link downloads aren’t available yet.");
+            else if((content.Url??WebMediaPayload.Parse(content.Text,content.Html)?.Url) is {} link)OpenWebLink(link);
         }
         catch(Exception error)when(error is IOException or UnauthorizedAccessException or InvalidOperationException){L10n.SetText(status,"Couldn’t read the dropped items: "+error.Message);}
     }

@@ -179,8 +179,8 @@ internal sealed partial class MainWindow
         if(busy)return;
         try
         {
-            var result=await ClipboardImport.ReadAsync(this,library);ShowLibrary(false);
-            if(result.Link is not null){L10n.SetText(status,"Link downloads aren’t available yet.");return;}
+            var result=await ClipboardImport.ReadAsync(this,library);if(result.Link is null)ShowLibrary(false);
+            if(result.Link is not null){OpenWebLink(result.Link);return;}
             files.Clear();AddFiles(result.Paths);
             if(record)Record(result.Label,result.Paths);
             L10n.SetText(status,result.Label+". Choose a tool or create a ZIP.");
