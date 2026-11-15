@@ -20,6 +20,7 @@ internal static partial class SmokeTests
     static partial void EditorScenes(List<(string Name,Scene Run)> scenes);
     static partial void IntegrationScenes(List<(string Name,Scene Run)> scenes);
     static partial void PreviewScenes(List<(string Name,Scene Run)> scenes);
+    static partial void DesktopScenes(List<(string Name,Scene Run)> scenes);
 
     internal static int Run(string directory)
     {
@@ -62,7 +63,7 @@ internal static partial class SmokeTests
         foreach(var (name,value) in new (string,object?)[]{("Files",Services.Files),("Dialogs",Services.Dialogs),("Shell",Services.Shell),("Screen",Services.Screen),("Theme",Services.Theme),("Drop",Services.Drop)})
             results.Add(("Services."+name,value is not null,null));
         var scenes=new List<(string Name,Scene Run)>();
-        HomeScenes(scenes);WheelScenes(scenes);LibraryScenes(scenes);SettingsScenes(scenes);EditorScenes(scenes);IntegrationScenes(scenes);PreviewScenes(scenes);
+        HomeScenes(scenes);WheelScenes(scenes);LibraryScenes(scenes);SettingsScenes(scenes);EditorScenes(scenes);IntegrationScenes(scenes);PreviewScenes(scenes);DesktopScenes(scenes);
         if(window is MainWindow main)
             foreach(var (name,run) in scenes)
             {
