@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><RootNamespace>Nashi.Engine</RootNamespace><RestorePackagesWithLockFile>true</RestorePackagesWithLockFile></PropertyGroup>
+  <ItemGroup><ProjectReference Include="../Nashi.Core/Nashi.Core.csproj" /></ItemGroup>
+  <ItemGroup><PackageReference Include="bblanchon.PDFium.Linux" Version="155.0.8044" /></ItemGroup>
+  <ItemGroup><InternalsVisibleTo Include="Nashi.Linux" /><InternalsVisibleTo Include="Nashi.Linux.Verify" /></ItemGroup>
+</Project>

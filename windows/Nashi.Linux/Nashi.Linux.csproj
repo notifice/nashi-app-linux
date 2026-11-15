@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType><RootNamespace>Nashi.Linux</RootNamespace><AssemblyName>Nashi</AssemblyName>
+    <RuntimeIdentifier>linux-x64</RuntimeIdentifier><SelfContained>true</SelfContained>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <PublishSingleFile>false</PublishSingleFile><DebugType>none</DebugType><DebugSymbols>false</DebugSymbols>
+    <ApplicationIcon>../../Resources/Brand/NashiIcon.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup><ProjectReference Include="../Nashi.Engine/Nashi.Engine.csproj" /></ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.1.6" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.6" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.6" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.6" />
+  </ItemGroup>
+  <ItemGroup>
+    <AvaloniaResource Include="../../Resources/Brand/NashiIcon.png" Link="Assets/NashiIcon.png" />
+    <AvaloniaResource Include="../../Resources/Brand/NashiMark.png" Link="Assets/NashiMark.png" />
+    <AvaloniaResource Include="../../Resources/Brand/NashiMarkHappy.png" Link="Assets/NashiMarkHappy.png" />
+    <AvaloniaResource Include="../../Resources/Sounds/WheelSelection.wav" Link="Assets/WheelSelection.wav" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="../../LICENSE" Link="LICENSE.txt" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../THIRD-PARTY-NOTICES.txt" Link="THIRD-PARTY-NOTICES.txt" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>
