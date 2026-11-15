@@ -81,7 +81,8 @@ internal sealed partial class SettingsWindow:Window
                 break;
             case "Shortcut":
                 Heading("Global shortcut","Copy files in your file manager, then press a shortcut to open the wheel.");
-                var command="\""+(Environment.ProcessPath??"nashi")+"\" --wheel";
+                // Inside an AppImage the process runs from a temporary mount; $APPIMAGE is the stable file the user launched.
+                var command="\""+(Environment.GetEnvironmentVariable("APPIMAGE") is{Length:>0}image&&File.Exists(image)?image:Environment.ProcessPath??"nashi")+"\" --wheel";
                 page.Children.Add(Ui.Text("Set it in System Settings → Keyboard → Shortcuts → Add New → Command:",13));
                 page.Children.Add(new SelectableTextBlock{Text=command,TextWrapping=Avalonia.Media.TextWrapping.Wrap,Margin=new(4,8,4,8)});
                 page.Children.Add(Ui.Button("Copy command",async()=>{try{if(Services.Clipboard is not null)await Services.Clipboard.SetTextAsync(this,command);}catch(Exception error)when(error is InvalidOperationException or IOException){Fail(error.Message,"Copy command");}}));
